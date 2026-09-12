@@ -1,0 +1,4 @@
+# Скопируйте этот файл в db.properties и впишите свои значения
+db.url=jdbc:postgresql://localhost:5432/library_db
+db.user=postgres
+db.password=YOUR_PASSWORD
