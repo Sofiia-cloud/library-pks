@@ -7,22 +7,19 @@ import ru.mirea.library.model.Reader;
 import ru.mirea.library.service.ReaderService;
 
 import java.util.List;
-import java.util.Scanner;
 
 public class ReaderMenu {
 
     private final ReaderService service;
-    private final Scanner scanner;
 
-    public ReaderMenu(ReaderService service, Scanner scanner) {
+    public ReaderMenu(ReaderService service) {
         this.service = service;
-        this.scanner = scanner;
     }
 
     public void show() {
         while (true) {
             printMenu();
-            int choice = InputHelper.readInt(scanner, "Выберите действие: ");
+            int choice = InputHelper.readInt("Выберите действие: ");
             try {
                 switch (choice) {
                     case 1 -> create();
@@ -52,10 +49,10 @@ public class ReaderMenu {
     }
 
     private void create() {
-        String name = InputHelper.readString(scanner, "ФИО: ");
-        String email = InputHelper.readString(scanner, "Email: ");
-        String phone = InputHelper.readString(scanner, "Телефон (можно пусто): ");
-        String card  = InputHelper.readString(scanner, "Билет (LIB-XXXX): ");
+        String name = InputHelper.readString("ФИО: ");
+        String email = InputHelper.readString("Email: ");
+        String phone = InputHelper.readString("Телефон (можно пусто): ");
+        String card  = InputHelper.readString("Билет (LIB-XXXX): ");
 
         Reader r = service.create(name, email, phone.isBlank() ? null : phone, card);
         System.out.println("Создан читатель: " + r);
@@ -71,28 +68,28 @@ public class ReaderMenu {
     }
 
     private void findById() {
-        int id = InputHelper.readInt(scanner, "ID: ");
+        int id = InputHelper.readInt("ID: ");
         System.out.println(service.getById(id));
     }
 
     private void update() {
-        int id = InputHelper.readInt(scanner, "ID изменяемого читателя: ");
+        int id = InputHelper.readInt("ID изменяемого читателя: ");
         Reader current = service.getById(id);
         System.out.println("Текущее: " + current);
 
-        String name = InputHelper.readString(scanner,
+        String name = InputHelper.readString(
                 "Новое ФИО [" + current.getFullName() + "]: ");
         if (name.isBlank()) name = current.getFullName();
 
-        String email = InputHelper.readString(scanner,
+        String email = InputHelper.readString(
                 "Новый email [" + current.getEmail() + "]: ");
         if (email.isBlank()) email = current.getEmail();
 
-        String phone = InputHelper.readString(scanner,
+        String phone = InputHelper.readString(
                 "Новый телефон [" + current.getPhone() + "]: ");
         if (phone.isBlank()) phone = current.getPhone();
 
-        String card = InputHelper.readString(scanner,
+        String card = InputHelper.readString(
                 "Новый билет [" + current.getLibraryCardNumber() + "]: ");
         if (card.isBlank()) card = current.getLibraryCardNumber();
 
@@ -101,9 +98,8 @@ public class ReaderMenu {
     }
 
     private void delete() {
-        int id = InputHelper.readInt(scanner, "ID для удаления: ");
-        System.out.print("Подтвердите удаление (y/n): ");
-        String confirm = scanner.nextLine().trim();
+        int id = InputHelper.readInt("ID для удаления: ");
+        String confirm = InputHelper.readString("Подтвердите удаление (y/n): ");
         if (!confirm.equalsIgnoreCase("y")) {
             System.out.println("Отменено.");
             return;
