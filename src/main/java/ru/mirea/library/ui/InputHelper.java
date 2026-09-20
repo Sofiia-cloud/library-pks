@@ -1,14 +1,21 @@
 package ru.mirea.library.ui;
 
+import ru.mirea.library.exception.BusinessException;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 public final class InputHelper {
 
     private static final BufferedReader READER =
             new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
+
+    private static final DateTimeFormatter DATE_FMT =
+            DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
     private InputHelper() { }
 
@@ -34,6 +41,42 @@ public final class InputHelper {
             return line == null ? "" : line.trim();
         } catch (IOException e) {
             throw new RuntimeException("Ошибка чтения ввода", e);
+        }
+    }
+
+    public static LocalDate readOptionalDate(String prompt) {
+        String raw = readString(prompt);
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(raw.trim(), DATE_FMT);
+        } catch (Exception e) {
+            throw new BusinessException(
+                    "Неверный формат даты: " + raw + " (ожидается дд.ММ.гггг)");
+        }
+    }
+
+    public static LocalDate readDate(String prompt) {
+        LocalDate d = readOptionalDate(prompt);
+        if (d == null) {
+            throw new BusinessException("Дата обязательна");
+        }
+        return d;
+    }
+
+    public static boolean readYesNo(String prompt) {
+        while (true) {
+            String raw = readString(prompt);
+            if (raw == null) return false;
+            String v = raw.trim().toLowerCase();
+            if (v.equals("y") || v.equals("yes") || v.equals("д") || v.equals("да")) {
+                return true;
+            }
+            if (v.equals("n") || v.equals("no") || v.equals("н") || v.equals("нет")) {
+                return false;
+            }
+            System.out.println("Введите y или n.");
         }
     }
 }

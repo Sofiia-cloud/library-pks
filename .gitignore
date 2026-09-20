@@ -14,3 +14,5 @@ Thumbs.db
 
 # Local DB config (contains password)
 src/main/resources/db.properties
+
+dependency-reduced-pom.xml
