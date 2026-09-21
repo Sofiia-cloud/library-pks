@@ -3,21 +3,52 @@ package ru.mirea.library.ui;
 import ru.mirea.library.exception.BusinessException;
 
 import java.io.BufferedReader;
+import java.io.Console;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
 public final class InputHelper {
 
+    private static final Charset INPUT_CHARSET = detectConsoleCharset();
+
     private static final BufferedReader READER =
-            new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
+            new BufferedReader(new InputStreamReader(System.in, INPUT_CHARSET));
 
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
     private InputHelper() { }
+
+    private static Charset detectConsoleCharset() {
+        String override = System.getProperty("console.encoding");
+        if (override != null && !override.isBlank()) {
+            try {
+                return Charset.forName(override);
+            } catch (Exception ignored) { }
+        }
+
+        Console console = System.console();
+        if (console != null && console.charset() != null) {
+            return console.charset();
+        }
+
+        String stdinEnc = System.getProperty("stdin.encoding");
+        if (stdinEnc != null && !stdinEnc.isBlank()) {
+            try {
+                return Charset.forName(stdinEnc);
+            } catch (Exception ignored) { }
+        }
+
+        String os = System.getProperty("os.name", "").toLowerCase();
+        if (os.contains("win")) {
+            return Charset.forName("CP866");
+        }
+        return StandardCharsets.UTF_8;
+    }
 
     public static int readInt(String prompt) {
         while (true) {
