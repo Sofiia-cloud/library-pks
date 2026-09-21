@@ -43,16 +43,16 @@
 
 Проект построен по многослойной схеме:
 
-Console UI  →  Service  →  Repository / JDBC  →  PostgreSQL
+Console UI → Service → Repository / JDBC → PostgreSQL
 
-| Слой | Назначение | Пакет |
-|---|---|---|
-| Console UI | Меню, ввод, вывод | ru.mirea.library.ui |
-| Service | Бизнес-логика, валидация | ru.mirea.library.service |
-| Repository | SQL-запросы, JDBC | ru.mirea.library.repository |
-| Model | Предметные сущности | ru.mirea.library.model |
-| Exception | Собственные исключения | ru.mirea.library.exception |
-| Util | Подключение к БД, экспорт | ru.mirea.library.util |
+| Слой       | Назначение                | Пакет                       |
+| ---------- | ------------------------- | --------------------------- |
+| Console UI | Меню, ввод, вывод         | ru.mirea.library.ui         |
+| Service    | Бизнес-логика, валидация  | ru.mirea.library.service    |
+| Repository | SQL-запросы, JDBC         | ru.mirea.library.repository |
+| Model      | Предметные сущности       | ru.mirea.library.model      |
+| Exception  | Собственные исключения    | ru.mirea.library.exception  |
+| Util       | Подключение к БД, экспорт | ru.mirea.library.util       |
 
 SQL-запросы находятся только в слое Repository. В UI нет ни одной строки SQL.
 
@@ -123,9 +123,9 @@ notepad src\main\resources\db.properties
 
 Вписать свой пароль PostgreSQL:
 
-db.url=jdbc:postgresql://localhost:5432/library_db
+db.url=jdbc:postgresql://localhost:5432/library*db
 db.user=postgres
-db.password=ТВОЙ_ПАРОЛЬ
+db.password=ТВОЙ*ПАРОЛЬ
 
 Файл db.properties добавлен в .gitignore и не коммитится.
 
@@ -155,54 +155,63 @@ mvn exec:java "-Dexec.mainClass=ru.mirea.library.Main"
 
 ## Структура проекта
 
+```
 library-pks/
 ├── pom.xml
 ├── schema.sql
 ├── README.md
 ├── mermaid.png
 ├── .gitignore
-├── src/
-│   └── main/
-│       ├── java/ru/mirea/library/
-│       │   ├── Main.java
-│       │   ├── model/
-│       │   │   ├── Reader.java
-│       │   │   ├── BookRequest.java
-│       │   │   └── RequestStatus.java
-│       │   ├── repository/
-│       │   │   ├── Repository.java
-│       │   │   ├── ReaderRepository.java
-│       │   │   ├── BookRequestRepository.java
-│       │   │   └── ReportRepository.java
-│       │   ├── service/
-│       │   │   ├── ReaderService.java
-│       │   │   ├── BookRequestService.java
-│       │   │   ├── SearchService.java
-│       │   │   ├── FilterService.java
-│       │   │   ├── SortService.java
-│       │   │   ├── StatisticService.java
-│       │   │   └── ReportService.java
-│       │   ├── exception/
-│       │   │   ├── BusinessException.java
-│       │   │   ├── DatabaseException.java
-│       │   │   └── EntityNotFoundException.java
-│       │   ├── ui/
-│       │   │   ├── ConsoleMenu.java
-│       │   │   ├── InputHelper.java
-│       │   │   ├── ReaderMenu.java
-│       │   │   ├── BookRequestMenu.java
-│       │   │   ├── SearchMenu.java
-│       │   │   ├── FilterMenu.java
-│       │   │   ├── SortMenu.java
-│       │   │   ├── ReportMenu.java
-│       │   │   ├── StatisticMenu.java
-│       │   │   └── DatabaseViewMenu.java
-│       │   └── util/
-│       │       ├── DatabaseManager.java
-│       │       └── ExcelExporter.java
-│       └── resources/
-│           ├── db.properties.example
-│           └── db.properties          (не коммитится)
+└── src/
+    └── main/
+        ├── java/ru/mirea/library/
+        │   ├── Main.java
+        │   │
+        │   ├── model/
+        │   │   ├── Reader.java
+        │   │   ├── BookRequest.java
+        │   │   └── RequestStatus.java
+        │   │
+        │   ├── repository/
+        │   │   ├── Repository.java
+        │   │   ├── ReaderRepository.java
+        │   │   ├── BookRequestRepository.java
+        │   │   └── ReportRepository.java
+        │   │
+        │   ├── service/
+        │   │   ├── ReaderService.java
+        │   │   ├── BookRequestService.java
+        │   │   ├── SearchService.java
+        │   │   ├── FilterService.java
+        │   │   ├── SortService.java
+        │   │   ├── StatisticService.java
+        │   │   └── ReportService.java
+        │   │
+        │   ├── exception/
+        │   │   ├── BusinessException.java
+        │   │   ├── DatabaseException.java
+        │   │   └── EntityNotFoundException.java
+        │   │
+        │   ├── ui/
+        │   │   ├── ConsoleMenu.java
+        │   │   ├── InputHelper.java
+        │   │   ├── ReaderMenu.java
+        │   │   ├── BookRequestMenu.java
+        │   │   ├── SearchMenu.java
+        │   │   ├── FilterMenu.java
+        │   │   ├── SortMenu.java
+        │   │   ├── ReportMenu.java
+        │   │   ├── StatisticMenu.java
+        │   │   └── DatabaseViewMenu.java
+        │   │
+        │   └── util/
+        │       ├── DatabaseManager.java
+        │       └── ExcelExporter.java
+        │
+        └── resources/
+            ├── db.properties.example
+            └── db.properties          ← не коммитится (в .gitignore)
+```
 
 ---
 
@@ -216,28 +225,28 @@ library-pks/
 
 readers — читатели библиотеки:
 
-| Колонка | Тип | Ограничения |
-|---|---|---|
-| id | SERIAL | PRIMARY KEY |
-| full_name | VARCHAR(150) | NOT NULL |
-| email | VARCHAR(150) | NOT NULL, UNIQUE |
-| phone | VARCHAR(30) | |
-| library_card_number | VARCHAR(30) | NOT NULL, UNIQUE |
-| registered_at | TIMESTAMP | NOT NULL, DEFAULT NOW() |
+| Колонка             | Тип          | Ограничения             |
+| ------------------- | ------------ | ----------------------- |
+| id                  | SERIAL       | PRIMARY KEY             |
+| full_name           | VARCHAR(150) | NOT NULL                |
+| email               | VARCHAR(150) | NOT NULL, UNIQUE        |
+| phone               | VARCHAR(30)  |                         |
+| library_card_number | VARCHAR(30)  | NOT NULL, UNIQUE        |
+| registered_at       | TIMESTAMP    | NOT NULL, DEFAULT NOW() |
 
 book_requests — заявки на выдачу книги:
 
-| Колонка | Тип | Ограничения |
-|---|---|---|
-| id | SERIAL | PRIMARY KEY |
-| reader_id | INTEGER | NOT NULL, FOREIGN KEY → readers(id) ON DELETE RESTRICT |
-| book_title | VARCHAR(200) | NOT NULL |
-| book_author | VARCHAR(150) | NOT NULL |
-| isbn | VARCHAR(20) | |
-| status | VARCHAR(20) | NOT NULL, CHECK (CREATED/APPROVED/ISSUED/RETURNED/CANCELLED/REJECTED) |
-| created_at | TIMESTAMP | NOT NULL, DEFAULT NOW() |
-| desired_return_date | DATE | |
-| comment | TEXT | |
+| Колонка             | Тип          | Ограничения                                                           |
+| ------------------- | ------------ | --------------------------------------------------------------------- |
+| id                  | SERIAL       | PRIMARY KEY                                                           |
+| reader_id           | INTEGER      | NOT NULL, FOREIGN KEY → readers(id) ON DELETE RESTRICT                |
+| book_title          | VARCHAR(200) | NOT NULL                                                              |
+| book_author         | VARCHAR(150) | NOT NULL                                                              |
+| isbn                | VARCHAR(20)  |                                                                       |
+| status              | VARCHAR(20)  | NOT NULL, CHECK (CREATED/APPROVED/ISSUED/RETURNED/CANCELLED/REJECTED) |
+| created_at          | TIMESTAMP    | NOT NULL, DEFAULT NOW()                                               |
+| desired_return_date | DATE         |                                                                       |
+| comment             | TEXT         |                                                                       |
 
 ### Связь
 
@@ -255,41 +264,41 @@ book_requests.reader_id → readers.id — many-to-one, ON DELETE RESTRICT (не
 
 Правила реализованы в сервисном слое, а не в интерфейсе.
 
-| # | Правило | Где реализовано |
-|---|---|---|
-| 1 | ФИО читателя обязательно | ReaderService.create |
-| 2 | Email по regex, обязателен, уникален | ReaderService.validateEmail |
-| 3 | Номер билета LIB-XXXX, обязателен, уникален | ReaderService.validateCard |
-| 4 | Телефон по regex (если указан) | ReaderService.validatePhone |
-| 5 | Нельзя удалить читателя с активными заявками | ReaderService.delete |
-| 6 | Название книги обязательно | BookRequestService.create |
-| 7 | Автор книги обязателен | BookRequestService.create |
-| 8 | Читатель должен существовать | BookRequestService через ReaderService.existsById |
-| 9 | Дата возврата не в прошлом | BookRequestService.create |
-| 10 | Запрещены недопустимые переходы статусов | RequestStatus.canTransitionTo |
-| 11 | Нельзя удалить заявку в статусе ISSUED | BookRequestService.delete |
+| #   | Правило                                      | Где реализовано                                   |
+| --- | -------------------------------------------- | ------------------------------------------------- |
+| 1   | ФИО читателя обязательно                     | ReaderService.create                              |
+| 2   | Email по regex, обязателен, уникален         | ReaderService.validateEmail                       |
+| 3   | Номер билета LIB-XXXX, обязателен, уникален  | ReaderService.validateCard                        |
+| 4   | Телефон по regex (если указан)               | ReaderService.validatePhone                       |
+| 5   | Нельзя удалить читателя с активными заявками | ReaderService.delete                              |
+| 6   | Название книги обязательно                   | BookRequestService.create                         |
+| 7   | Автор книги обязателен                       | BookRequestService.create                         |
+| 8   | Читатель должен существовать                 | BookRequestService через ReaderService.existsById |
+| 9   | Дата возврата не в прошлом                   | BookRequestService.create                         |
+| 10  | Запрещены недопустимые переходы статусов     | RequestStatus.canTransitionTo                     |
+| 11  | Нельзя удалить заявку в статусе ISSUED       | BookRequestService.delete                         |
 
 ---
 
 ## Enum RequestStatus
 
 public enum RequestStatus {
-    CREATED,    // создана
-    APPROVED,   // одобрена
-    ISSUED,     // выдана
-    RETURNED,   // возвращена
-    CANCELLED,  // отменена
-    REJECTED    // отклонена
+CREATED, // создана
+APPROVED, // одобрена
+ISSUED, // выдана
+RETURNED, // возвращена
+CANCELLED, // отменена
+REJECTED // отклонена
 }
 
 Разрешённые переходы (метод canTransitionTo):
 
-| Из | В |
-|---|---|
-| CREATED | APPROVED, CANCELLED, REJECTED |
-| APPROVED | ISSUED, CANCELLED |
-| ISSUED | RETURNED |
-| RETURNED, CANCELLED, REJECTED | — (терминальные) |
+| Из                            | В                             |
+| ----------------------------- | ----------------------------- |
+| CREATED                       | APPROVED, CANCELLED, REJECTED |
+| APPROVED                      | ISSUED, CANCELLED             |
+| ISSUED                        | RETURNED                      |
+| RETURNED, CANCELLED, REJECTED | — (терминальные)              |
 
 ---
 
@@ -305,29 +314,34 @@ public enum RequestStatus {
 6. Отчёты и статистика
 7. Экспорт данных (Excel)
 8. Показать таблицы БД
-0. Выход
+9. Выход
 
 ### 1. Читатели
+
 - Создание, список, поиск по ID, изменение, удаление
 - Валидация: ФИО, email, телефон, номер билета
 - Запрет удаления при активных заявках
 
 ### 2. Заявки на выдачу книги
+
 - Создание, список, поиск по ID, изменение, удаление
 - Смена статуса с проверкой допустимых переходов
 
 ### 3. Поиск
+
 1. По названию книги (ILIKE)
 2. По автору (ILIKE)
 3. По ФИО читателя (JOIN + ILIKE)
 4. По номеру читательского билета
 
 ### 4. Фильтрация
+
 1. По статусу
 2. По диапазону дат создания
 3. По читателю
 
 ### 5. Сортировка (Stream API)
+
 1. По дате создания (↑ / ↓)
 2. По названию книги (А-Я / Я-А)
 3. По статусу (↑ / ↓)
@@ -335,6 +349,7 @@ public enum RequestStatus {
 ### 6. Отчёты и статистика
 
 12 агрегатов (все — SQL GROUP BY / JOIN / LEFT JOIN / LIMIT):
+
 1. Сводка (всего / активных / просроченных / среднее)
 2. Распределение по статусам с процентами
 3. Топ книг по числу заявок
@@ -345,6 +360,7 @@ public enum RequestStatus {
 8. Заявки по месяцам за год
 
 6 показателей в краткой статистике:
+
 - Всего читателей
 - Всего заявок
 - Активных (CREATED + APPROVED + ISSUED)
@@ -353,10 +369,12 @@ public enum RequestStatus {
 - Заявок за последние 30 дней
 
 ### 7. Экспорт данных
+
 Экспорт в library_requests.xlsx через Apache POI.
 
 ### 8. Показать таблицы БД
-Прямой SELECT * из readers и book_requests.
+
+Прямой SELECT \* из readers и book_requests.
 
 ---
 
@@ -367,7 +385,7 @@ public enum RequestStatus {
 Колонки:
 
 | ID заявки | ФИО читателя | Название книги | Автор | ISBN | Статус | Создана | Вернуть до | Комментарий |
-|---|---|---|---|---|---|---|---|---|
+| --------- | ------------ | -------------- | ----- | ---- | ------ | ------- | ---------- | ----------- |
 
 Данные берутся из SQL-запроса с JOIN book_requests + readers.
 
@@ -397,7 +415,7 @@ set PATH=C:\Program Files\PostgreSQL\13\bin;%PATH%
 
 Для постоянного эффекта — «Изменение переменных среды текущего пользователя» → Path → добавить C:\Program Files\PostgreSQL\13\bin.
 
-### Кириллица в psql — «крякозябры»
+### Кириллица в psql
 
 chcp 65001
 set PGCLIENTENCODING=UTF8
@@ -448,15 +466,9 @@ java -Dfile.encoding=UTF-8 -jar target\library-system-1.0-SNAPSHOT.jar
 
 ## Авторы
 
-Команда из 4 человек, группа [номер группы], МИРЭА.
+Команда из 4 человек, группа ЭФБО-02-24, РТУ МИРЭА
 
-- Участник 1: инфраструктура, БД, сущность Reader
-- Участник 2: сущность BookRequest, enum RequestStatus, бизнес-правила
-- Участник 3: поиск, фильтрация, сортировка, статистика, отчёты
-- Участник 4: главное меню, экспорт в Excel, README
-
----
-
-## Лицензия
-
-Учебный проект. Свободное использование в образовательных целях.
+- Участник 1 (Семенов Тихон): инфраструктура, БД, сущность Reader
+- Участник 2 (Иванова Валерия): сущность BookRequest, enum RequestStatus, бизнес-правила
+- Участник 3 (Головушкина София): поиск, фильтрация, сортировка, статистика, отчёты
+- Участник 4 (Лукьянов Антон): главное меню, экспорт в Excel, README
