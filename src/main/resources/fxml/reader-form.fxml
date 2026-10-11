@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.Button?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="ru.mirea.library.fx.controller.ReaderFormController"
+      spacing="10"
+      styleClass="form-container">
+
+    <padding>
+        <Insets top="16" right="16" bottom="16" left="16"/>
+    </padding>
+
+    <Label text="ФИО *"/>
+    <TextField fx:id="fieldFullName"/>
+
+    <Label text="Email *"/>
+    <TextField fx:id="fieldEmail"/>
+
+    <Label text="Телефон"/>
+    <TextField fx:id="fieldPhone"/>
+
+    <Label text="Номер билета * (формат LIB-XXXX)"/>
+    <TextField fx:id="fieldCard"/>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button fx:id="btnCancel" text="Отмена"/>
+        <Button fx:id="btnSave"   text="Сохранить" styleClass="primary-button"/>
+    </HBox>
+
+</VBox>
