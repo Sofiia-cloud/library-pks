@@ -25,7 +25,7 @@ public class MainController {
     @FXML
     private void initialize() {
         btnReaders.setOnAction(e -> openReaderView());
-        btnRequests.setOnAction(e -> showNotImplemented("Заявки"));
+        btnRequests.setOnAction(e -> openRequestView());
         btnSearch.setOnAction(e -> showNotImplemented("Поиск"));
         btnFilter.setOnAction(e -> showNotImplemented("Фильтрация"));
         btnSort.setOnAction(e -> showNotImplemented("Сортировка"));
@@ -42,6 +42,18 @@ public class MainController {
             contentPane.getChildren().setAll(view);
         } catch (IOException ex) {
             AlertHelper.showError("Не удалось открыть раздел «Читатели»: " + ex.getMessage());
+        }
+    }
+
+    private void openRequestView() {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/request-view.fxml")
+            );
+            Node view = loader.load();
+            contentPane.getChildren().setAll(view);
+        } catch (IOException ex) {
+            AlertHelper.showError("Не удалось открыть раздел «Заявки»: " + ex.getMessage());
         }
     }
 
