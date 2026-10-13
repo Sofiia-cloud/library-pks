@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="ru.mirea.library.fx.controller.StatisticsController"
+      spacing="15">
+    <padding><Insets top="15" right="15" bottom="15" left="15"/></padding>
+
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Label text="Статистика" styleClass="title"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="btnRefresh" text="Обновить"/>
+    </HBox>
+
+    <!-- Краткие показатели -->
+    <TitledPane text="Ключевые показатели" expanded="true">
+        <GridPane hgap="20" vgap="10">
+            <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+
+            <Label text="Всего читателей:"       GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <Label fx:id="lblTotalReaders"        GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="stat-value"/>
+
+            <Label text="Всего заявок:"           GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <Label fx:id="lblTotalRequests"       GridPane.columnIndex="1" GridPane.rowIndex="1" styleClass="stat-value"/>
+
+            <Label text="Активных:"               GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+            <Label fx:id="lblActiveRequests"      GridPane.columnIndex="1" GridPane.rowIndex="2" styleClass="stat-value"/>
+
+            <Label text="Возвращённых:"           GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+            <Label fx:id="lblReturned"            GridPane.columnIndex="3" GridPane.rowIndex="0" styleClass="stat-value"/>
+
+            <Label text="Отменённых/отклонённых:" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+            <Label fx:id="lblCancelledRejected"   GridPane.columnIndex="3" GridPane.rowIndex="1" styleClass="stat-value"/>
+
+            <Label text="Заявок за 30 дней:"      GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+            <Label fx:id="lblLast30Days"          GridPane.columnIndex="3" GridPane.rowIndex="2" styleClass="stat-value"/>
+
+            <Label text="Среднее заявок на читателя:" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+            <Label fx:id="lblAvgPerReader"            GridPane.columnIndex="1" GridPane.rowIndex="3" styleClass="stat-value"/>
+
+            <columnConstraints>
+                <ColumnConstraints minWidth="200"/>
+                <ColumnConstraints minWidth="80"/>
+                <ColumnConstraints minWidth="200"/>
+                <ColumnConstraints minWidth="80"/>
+            </columnConstraints>
+        </GridPane>
+    </TitledPane>
+
+    <!-- Распределение по статусам -->
+    <TitledPane text="Распределение по статусам" expanded="true">
+        <TableView fx:id="statusTable" prefHeight="220">
+            <columns>
+                <TableColumn fx:id="colStatusName"  text="Статус"     prefWidth="200"/>
+                <TableColumn fx:id="colStatusCount" text="Количество" prefWidth="120"/>
+                <TableColumn fx:id="colStatusPct"   text="Доля, %"    prefWidth="120"/>
+            </columns>
+        </TableView>
+    </TitledPane>
+
+    <!-- Топ-5 книг -->
+    <TitledPane text="Топ-5 книг по числу заявок" expanded="false">
+        <TableView fx:id="topBooksTable" prefHeight="200">
+            <columns>
+                <TableColumn fx:id="colTopBookTitle" text="Книга"      prefWidth="400"/>
+                <TableColumn fx:id="colTopBookCount" text="Заявок"     prefWidth="120"/>
+            </columns>
+        </TableView>
+    </TitledPane>
+
+    <!-- Топ-5 авторов -->
+    <TitledPane text="Топ-5 авторов по числу заявок" expanded="false">
+        <TableView fx:id="topAuthorsTable" prefHeight="200">
+            <columns>
+                <TableColumn fx:id="colTopAuthorName"  text="Автор"  prefWidth="400"/>
+                <TableColumn fx:id="colTopAuthorCount" text="Заявок" prefWidth="120"/>
+            </columns>
+        </TableView>
+    </TitledPane>
+
+</VBox>
