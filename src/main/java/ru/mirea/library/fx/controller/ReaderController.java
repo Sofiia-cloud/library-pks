@@ -20,6 +20,7 @@ import ru.mirea.library.repository.ReaderRepository;
 import ru.mirea.library.service.ReaderService;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -82,14 +83,22 @@ public class ReaderController {
     }
 
     private void openForm(Reader reader) {
-        try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/fxml/reader-form.fxml")
-            );
+        // Читаем FXML через InputStream — обходит проблему с кириллицей в пути
+        try (InputStream stream = getClass()
+                .getResourceAsStream("/fxml/reader-form.fxml")) {
+
+            if (stream == null) {
+                AlertHelper.showError("Не найден reader-form.fxml");
+                return;
+            }
+
+            FXMLLoader loader = new FXMLLoader();
             Stage dialog = new Stage();
             dialog.initModality(Modality.APPLICATION_MODAL);
-            dialog.setTitle(reader == null ? "Новый читатель" : "Редактирование читателя");
-            dialog.setScene(new Scene(loader.load(), 420, 340));
+            dialog.setTitle(reader == null
+                    ? "Новый читатель"
+                    : "Редактирование читателя");
+            dialog.setScene(new Scene(loader.load(stream), 420, 340));
 
             ReaderFormController controller = loader.getController();
             controller.setReader(reader);

@@ -9,6 +9,7 @@ import javafx.scene.layout.StackPane;
 import ru.mirea.library.fx.util.AlertHelper;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 public class MainController {
 
@@ -24,36 +25,29 @@ public class MainController {
 
     @FXML
     private void initialize() {
-        btnReaders.setOnAction(e -> openReaderView());
-        btnRequests.setOnAction(e -> openRequestView());
-        btnSearch.setOnAction(e -> showNotImplemented("Поиск"));
-        btnFilter.setOnAction(e -> showNotImplemented("Фильтрация"));
-        btnSort.setOnAction(e -> showNotImplemented("Сортировка"));
-        btnStatistics.setOnAction(e -> showNotImplemented("Статистика"));
+        btnReaders.setOnAction(e -> openView("/fxml/reader-view.fxml", "Читатели"));
+        btnRequests.setOnAction(e -> openView("/fxml/request-view.fxml", "Заявки"));
+        btnSearch.setOnAction(e -> openView("/fxml/search-view.fxml", "Поиск"));
+        btnFilter.setOnAction(e -> openView("/fxml/filter-view.fxml", "Фильтрация"));
+        btnSort.setOnAction(e -> openView("/fxml/sort-view.fxml", "Сортировка"));
+        btnStatistics.setOnAction(e -> openView("/fxml/statistics-view.fxml", "Статистика"));
         btnExport.setOnAction(e -> showNotImplemented("Экспорт"));
     }
 
-    private void openReaderView() {
-        try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/fxml/reader-view.fxml")
-            );
-            Node view = loader.load();
+    private void openView(String fxmlPath, String sectionName) {
+        // Грузим через getResourceAsStream — обходит проблему с кириллицей в пути
+        try (InputStream stream = getClass().getResourceAsStream(fxmlPath)) {
+            if (stream == null) {
+                AlertHelper.showError("Не найден файл разметки: " + fxmlPath);
+                return;
+            }
+            FXMLLoader loader = new FXMLLoader();
+            Node view = loader.load(stream);
             contentPane.getChildren().setAll(view);
         } catch (IOException ex) {
-            AlertHelper.showError("Не удалось открыть раздел «Читатели»: " + ex.getMessage());
-        }
-    }
-
-    private void openRequestView() {
-        try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/fxml/request-view.fxml")
-            );
-            Node view = loader.load();
-            contentPane.getChildren().setAll(view);
-        } catch (IOException ex) {
-            AlertHelper.showError("Не удалось открыть раздел «Заявки»: " + ex.getMessage());
+            ex.printStackTrace();   // ← временно, для отладки
+            AlertHelper.showError("Не удалось открыть раздел «" + sectionName + "»: "
+                    + ex.getMessage());
         }
     }
 

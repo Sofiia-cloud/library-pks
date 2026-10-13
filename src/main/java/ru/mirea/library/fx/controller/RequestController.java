@@ -24,6 +24,7 @@ import ru.mirea.library.service.BookRequestService;
 import ru.mirea.library.service.ReaderService;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -123,19 +124,26 @@ public class RequestController {
     }
 
     private void openForm(BookRequest request) {
-        try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/fxml/request-form.fxml"));
+        // Читаем FXML через InputStream — обходит проблему с кириллицей в пути
+        try (InputStream stream = getClass()
+                .getResourceAsStream("/fxml/request-form.fxml")) {
+
+            if (stream == null) {
+                AlertHelper.showError("Не найден request-form.fxml");
+                return;
+            }
+
+            FXMLLoader loader = new FXMLLoader();
             Stage dialog = new Stage();
             dialog.initModality(Modality.APPLICATION_MODAL);
             dialog.setTitle(request == null
                     ? "Новая заявка"
                     : "Редактирование заявки №" + request.getId());
-            dialog.setScene(new Scene(loader.load(), 480, 520));
+            dialog.setScene(new Scene(loader.load(stream), 480, 520));
 
             RequestFormController controller = loader.getController();
-            controller.setReaders(readerService.getAll());   
-            controller.setRequest(request);                 
+            controller.setReaders(readerService.getAll());
+            controller.setRequest(request);
 
             dialog.showAndWait();
 
