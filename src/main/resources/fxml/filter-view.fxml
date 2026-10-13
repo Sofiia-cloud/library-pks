@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="ru.mirea.library.fx.controller.FilterController"
+      spacing="10">
+    <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+
+    <Label text="Фильтрация заявок" styleClass="title"/>
+
+    <TitledPane text="Фильтр по статусу" expanded="false">
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <padding><Insets top="8" right="8" bottom="8" left="8"/></padding>
+            <Label text="Статус:"/>
+            <ComboBox fx:id="cmbStatus" prefWidth="200"/>
+            <Button fx:id="btnApplyStatus" text="Применить" styleClass="primary-button"/>
+        </HBox>
+    </TitledPane>
+
+    <TitledPane text="Фильтр по читателю" expanded="false">
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <padding><Insets top="8" right="8" bottom="8" left="8"/></padding>
+            <Label text="Читатель:"/>
+            <ComboBox fx:id="cmbReader" prefWidth="300"/>
+            <Button fx:id="btnApplyReader" text="Применить" styleClass="primary-button"/>
+        </HBox>
+    </TitledPane>
+
+    <TitledPane text="Фильтр по диапазону дат создания" expanded="true">
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <padding><Insets top="8" right="8" bottom="8" left="8"/></padding>
+            <Label text="От:"/>
+            <DatePicker fx:id="dateFrom" prefWidth="150"/>
+            <Label text="До:"/>
+            <DatePicker fx:id="dateTo" prefWidth="150"/>
+            <Button fx:id="btnApplyDateRange" text="Применить" styleClass="primary-button"/>
+        </HBox>
+    </TitledPane>
+
+    <HBox spacing="10">
+        <Button fx:id="btnReset" text="Сбросить все фильтры"/>
+        <Label fx:id="lblResultCount" text="Найдено: 0" styleClass="result-count"/>
+    </HBox>
+
+    <TableView fx:id="resultTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="colId"        text="ID"              prefWidth="50"/>
+            <TableColumn fx:id="colReader"    text="Читатель"        prefWidth="180"/>
+            <TableColumn fx:id="colBookTitle" text="Название книги"  prefWidth="200"/>
+            <TableColumn fx:id="colAuthor"    text="Автор"           prefWidth="150"/>
+            <TableColumn fx:id="colIsbn"      text="ISBN"            prefWidth="100"/>
+            <TableColumn fx:id="colStatus"    text="Статус"          prefWidth="110"/>
+            <TableColumn fx:id="colCreatedAt" text="Создана"         prefWidth="130"/>
+            <TableColumn fx:id="colReturnDate" text="Вернуть до"     prefWidth="110"/>
+        </columns>
+    </TableView>
+</VBox>
