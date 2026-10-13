@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="ru.mirea.library.fx.controller.SortController"
+      spacing="10">
+    <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+
+    <Label text="Сортировка заявок" styleClass="title"/>
+
+    <HBox spacing="15" styleClass="toolbar" alignment="CENTER_LEFT">
+        <padding><Insets top="8" right="8" bottom="8" left="8"/></padding>
+
+        <Label text="Поле сортировки:"/>
+        <ComboBox fx:id="cmbField" prefWidth="220"/>
+
+        <Label text="Направление:"/>
+        <ComboBox fx:id="cmbDirection" prefWidth="150"/>
+
+        <Button fx:id="btnApply" text="Применить" styleClass="primary-button"/>
+    </HBox>
+
+    <Label fx:id="lblResultCount" text="Показано: 0" styleClass="result-count"/>
+
+    <TableView fx:id="resultTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="colId"        text="ID"              prefWidth="50"/>
+            <TableColumn fx:id="colReader"    text="Читатель"        prefWidth="180"/>
+            <TableColumn fx:id="colBookTitle" text="Название книги"  prefWidth="200"/>
+            <TableColumn fx:id="colAuthor"    text="Автор"           prefWidth="150"/>
+            <TableColumn fx:id="colIsbn"      text="ISBN"            prefWidth="100"/>
+            <TableColumn fx:id="colStatus"    text="Статус"          prefWidth="110"/>
+            <TableColumn fx:id="colCreatedAt" text="Создана"         prefWidth="130"/>
+            <TableColumn fx:id="colReturnDate" text="Вернуть до"     prefWidth="110"/>
+        </columns>
+    </TableView>
+</VBox>
