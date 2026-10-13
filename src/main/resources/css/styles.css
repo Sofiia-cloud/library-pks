@@ -67,3 +67,28 @@
     -fx-text-fill: white;
     -fx-font-weight: bold;
 }
+
+.result-count {
+    -fx-text-fill: #2c3e50;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.stat-value {
+    -fx-text-fill: #2980b9;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.titled-pane > .title {
+    -fx-background-color: #ecf0f1;
+    -fx-font-weight: bold;
+}
+
+.titled-pane > .title > .text {
+    -fx-fill: #2c3e50;
+}
+
+.grid-pane {
+    -fx-background-color: #ffffff;
+}
