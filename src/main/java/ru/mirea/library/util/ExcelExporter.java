@@ -3,30 +3,15 @@ package ru.mirea.library.util;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import ru.mirea.library.exception.DatabaseException;
+import ru.mirea.library.model.RequestExportRow;
+import ru.mirea.library.repository.ReportRepository;
 
 import java.io.FileOutputStream;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.util.List;
 
 public final class ExcelExporter {
 
     private ExcelExporter() { }
-
-    private static final String SQL = """
-            SELECT br.id,
-                   r.full_name            AS reader_name,
-                   br.book_title,
-                   br.book_author,
-                   br.isbn,
-                   br.status,
-                   br.created_at,
-                   br.desired_return_date,
-                   br.comment
-            FROM book_requests br
-            JOIN readers r ON r.id = br.reader_id
-            ORDER BY br.id
-            """;
 
     private static final String[] HEADERS = {
             "ID заявки", "ФИО читателя", "Название книги", "Автор",
@@ -39,7 +24,8 @@ public final class ExcelExporter {
 
             CellStyle headerStyle = createHeaderStyle(wb);
             CellStyle bodyStyle   = createBodyStyle(wb);
-            CellStyle dateStyle   = createDateStyle(wb);
+            CellStyle dateTimeStyle = createDateStyle(wb, "dd.MM.yyyy HH:mm");
+            CellStyle dateStyle = createDateStyle(wb, "dd.MM.yyyy");
 
             Row header = sheet.createRow(0);
             for (int i = 0; i < HEADERS.length; i++) {
@@ -48,41 +34,37 @@ public final class ExcelExporter {
                 cell.setCellStyle(headerStyle);
             }
 
-            try (Connection conn = DatabaseManager.getInstance().getConnection();
-                 PreparedStatement ps = conn.prepareStatement(SQL);
-                 ResultSet rs = ps.executeQuery()) {
+            List<RequestExportRow> requests = new ReportRepository().requestsForExport();
+            int rowIdx = 1;
+            for (RequestExportRow request : requests) {
+                Row row = sheet.createRow(rowIdx++);
 
-                int rowIdx = 1;
-                while (rs.next()) {
-                    Row row = sheet.createRow(rowIdx++);
+                setCell(row, 0, request.id(), bodyStyle);
+                setCell(row, 1, request.readerName(), bodyStyle);
+                setCell(row, 2, request.bookTitle(), bodyStyle);
+                setCell(row, 3, request.bookAuthor(), bodyStyle);
+                setCell(row, 4, request.isbn(), bodyStyle);
+                setCell(row, 5, request.status().getRussianName(), bodyStyle);
 
-                    setCell(row, 0, rs.getInt("id"), bodyStyle);
-                    setCell(row, 1, rs.getString("reader_name"), bodyStyle);
-                    setCell(row, 2, rs.getString("book_title"), bodyStyle);
-                    setCell(row, 3, rs.getString("book_author"), bodyStyle);
-                    setCell(row, 4, rs.getString("isbn"), bodyStyle);
-                    setCell(row, 5, rs.getString("status"), bodyStyle);
-
-                    Cell createdCell = row.createCell(6);
-                    if (rs.getTimestamp("created_at") != null) {
-                        createdCell.setCellValue(rs.getTimestamp("created_at").toLocalDateTime());
-                        createdCell.setCellStyle(dateStyle);
-                    } else {
-                        createdCell.setCellValue("—");
-                        createdCell.setCellStyle(bodyStyle);
-                    }
-
-                    Cell returnCell = row.createCell(7);
-                    if (rs.getDate("desired_return_date") != null) {
-                        returnCell.setCellValue(rs.getDate("desired_return_date").toLocalDate());
-                        returnCell.setCellStyle(dateStyle);
-                    } else {
-                        returnCell.setCellValue("—");
-                        returnCell.setCellStyle(bodyStyle);
-                    }
-
-                    setCell(row, 8, rs.getString("comment"), bodyStyle);
+                Cell createdCell = row.createCell(6);
+                if (request.createdAt() != null) {
+                    createdCell.setCellValue(request.createdAt());
+                    createdCell.setCellStyle(dateTimeStyle);
+                } else {
+                    createdCell.setCellValue("—");
+                    createdCell.setCellStyle(bodyStyle);
                 }
+
+                Cell returnCell = row.createCell(7);
+                if (request.desiredReturnDate() != null) {
+                    returnCell.setCellValue(request.desiredReturnDate());
+                    returnCell.setCellStyle(dateStyle);
+                } else {
+                    returnCell.setCellValue("—");
+                    returnCell.setCellStyle(bodyStyle);
+                }
+
+                setCell(row, 8, request.comment(), bodyStyle);
             }
 
             for (int i = 0; i < HEADERS.length; i++) {
@@ -141,10 +123,10 @@ public final class ExcelExporter {
         return style;
     }
 
-    private static CellStyle createDateStyle(Workbook wb) {
+    private static CellStyle createDateStyle(Workbook wb, String format) {
         CellStyle style = createBodyStyle(wb);
         CreationHelper helper = wb.getCreationHelper();
-        style.setDataFormat(helper.createDataFormat().getFormat("dd.MM.yyyy HH:mm"));
+        style.setDataFormat(helper.createDataFormat().getFormat(format));
         return style;
     }
 }

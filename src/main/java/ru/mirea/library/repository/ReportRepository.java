@@ -1,6 +1,7 @@
 package ru.mirea.library.repository;
 
 import ru.mirea.library.exception.DatabaseException;
+import ru.mirea.library.model.RequestExportRow;
 import ru.mirea.library.model.RequestStatus;
 import ru.mirea.library.util.DatabaseManager;
 
@@ -109,6 +110,36 @@ public class ReportRepository {
             SELECT COUNT(*) FROM book_requests
             WHERE created_at >= NOW() - INTERVAL '30 days'
             """;
+
+    private static final String EXPORT_REQUESTS = """
+            SELECT br.id, r.full_name AS reader_name, br.book_title, br.book_author,
+                   br.isbn, br.status, br.created_at, br.desired_return_date, br.comment
+            FROM book_requests br
+            JOIN readers r ON r.id = br.reader_id
+            ORDER BY br.id
+            """;
+
+    public List<RequestExportRow> requestsForExport() {
+        List<RequestExportRow> result = new ArrayList<>();
+        try (Connection c = db.getConnection();
+             PreparedStatement ps = c.prepareStatement(EXPORT_REQUESTS);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Timestamp createdAt = rs.getTimestamp("created_at");
+                java.sql.Date returnDate = rs.getDate("desired_return_date");
+                result.add(new RequestExportRow(
+                        rs.getInt("id"), rs.getString("reader_name"),
+                        rs.getString("book_title"), rs.getString("book_author"),
+                        rs.getString("isbn"), RequestStatus.valueOf(rs.getString("status")),
+                        createdAt == null ? null : createdAt.toLocalDateTime(),
+                        returnDate == null ? null : returnDate.toLocalDate(),
+                        rs.getString("comment")));
+            }
+            return result;
+        } catch (SQLException e) {
+            throw new DatabaseException("Ошибка подготовки заявок к экспорту", e);
+        }
+    }
 
     public long countByStatus(RequestStatus status) {
         try (Connection c = db.getConnection();

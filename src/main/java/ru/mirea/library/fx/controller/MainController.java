@@ -3,11 +3,14 @@ package ru.mirea.library.fx.controller;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.layout.StackPane;
+import javafx.stage.FileChooser;
+import javafx.stage.Window;
 import ru.mirea.library.fx.util.AlertHelper;
+import ru.mirea.library.util.ExcelExporter;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -31,7 +34,7 @@ public class MainController {
         btnFilter.setOnAction(e -> openView("/fxml/filter-view.fxml", "Фильтрация"));
         btnSort.setOnAction(e -> openView("/fxml/sort-view.fxml", "Сортировка"));
         btnStatistics.setOnAction(e -> openView("/fxml/statistics-view.fxml", "Статистика"));
-        btnExport.setOnAction(e -> showNotImplemented("Экспорт"));
+        btnExport.setOnAction(e -> exportRequests());
     }
 
     private void openView(String fxmlPath, String sectionName) {
@@ -45,17 +48,32 @@ public class MainController {
             Node view = loader.load(stream);
             contentPane.getChildren().setAll(view);
         } catch (IOException ex) {
-            ex.printStackTrace();   // ← временно, для отладки
             AlertHelper.showError("Не удалось открыть раздел «" + sectionName + "»: "
                     + ex.getMessage());
         }
     }
 
-    private void showNotImplemented(String section) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Раздел в разработке");
-        alert.setHeaderText(null);
-        alert.setContentText("Раздел «" + section + "» будет реализован позже.");
-        alert.showAndWait();
+    private void exportRequests() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Экспорт заявок в Excel");
+        chooser.setInitialFileName("library_requests.xlsx");
+        chooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Книга Excel (*.xlsx)", "*.xlsx"));
+
+        Window owner = contentPane.getScene() == null
+                ? null : contentPane.getScene().getWindow();
+        File selectedFile = chooser.showSaveDialog(owner);
+        if (selectedFile == null) {
+            return;
+        }
+
+        File outputFile = selectedFile.getName().toLowerCase().endsWith(".xlsx")
+                ? selectedFile : new File(selectedFile.getParentFile(), selectedFile.getName() + ".xlsx");
+        try {
+            ExcelExporter.exportBookRequests(outputFile.getAbsolutePath());
+            AlertHelper.showInfo("Заявки экспортированы в файл:\n" + outputFile.getAbsolutePath());
+        } catch (RuntimeException ex) {
+            AlertHelper.showError("Не удалось экспортировать заявки: " + ex.getMessage());
+        }
     }
 }
