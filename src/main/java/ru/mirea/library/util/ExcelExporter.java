@@ -97,7 +97,7 @@ public final class ExcelExporter {
         font.setColor(IndexedColors.WHITE.getIndex());
         font.setFontHeightInPoints((short) 12);
         style.setFont(font);
-        style.setFillForegroundColor(IndexedColors.DARK_RED.getIndex());
+        style.setFillForegroundColor(IndexedColors.DARK_BLUE.getIndex());
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         style.setAlignment(HorizontalAlignment.CENTER);
         style.setVerticalAlignment(VerticalAlignment.CENTER);
@@ -113,7 +113,7 @@ public final class ExcelExporter {
         Font font = wb.createFont();
         font.setFontHeightInPoints((short) 11);
         style.setFont(font);
-        style.setFillForegroundColor(IndexedColors.LEMON_CHIFFON.getIndex());
+        style.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         style.setVerticalAlignment(VerticalAlignment.CENTER);
         style.setBorderBottom(BorderStyle.HAIR);
