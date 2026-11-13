@@ -1,18 +1,50 @@
+# Maven and Java build output
 target/
+out/
+bin/
 *.class
 *.jar
-*.log
+!**/.mvn/wrapper/maven-wrapper.jar
+dependency-reduced-pom.xml
+.flattened-pom.xml
 
-# IDE
+# IntelliJ IDEA
 .idea/
 *.iml
-.vscode/
+*.ipr
+*.iws
 
-# OS
+# VS Code and Java language server
+.vscode/
+*.code-workspace
+.classpath
+.project
+.settings/
+.factorypath
+.history/
+
+# Local configuration and secrets
+db.properties
+.env
+.env.*
+!.env.example
+!.env.*.example
+application-local.yml
+application-local.yaml
+application-local.properties
+
+# Logs, JVM dumps and generated exports
+*.log
+hs_err_pid*
+replay_pid*
+*.hprof
+*.jfr
+library_requests.xlsx
+
+# OS and editor temporary files
 .DS_Store
 Thumbs.db
-
-# Local DB config (contains password)
-src/main/resources/db.properties
-
-dependency-reduced-pom.xml
+Desktop.ini
+*.swp
+*.swo
+*~
