@@ -126,7 +126,7 @@ class PersistenceIT {
         Flyway flyway = flyway();
         assertThatThrownBy(flyway::migrate).isInstanceOf(FlywayException.class);
         flyway.baseline();
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(2);
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(3);
         assertThat(jdbc.queryForList("SELECT reader_number, full_name, email, phone, library_card_number, "
                 + "registered_at FROM readers ORDER BY reader_number")).isEqualTo(readersBefore);
         assertThat(jdbc.queryForList("SELECT br.request_number, r.reader_number, br.book_title, br.book_author, "
@@ -225,7 +225,7 @@ class PersistenceIT {
                     assertThat(context).hasNotFailed().hasSingleBean(EntityManagerFactory.class);
                     assertThat(context.getEnvironment().getProperty("spring.jpa.hibernate.ddl-auto"))
                             .isEqualTo("validate");
-                    assertThat(context.getBean(Flyway.class).info().current().getVersion().toString()).isEqualTo("3");
+                    assertThat(context.getBean(Flyway.class).info().current().getVersion().toString()).isEqualTo("4");
                     action.accept(context.getBean(EntityManagerFactory.class));
                 });
     }

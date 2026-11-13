@@ -46,6 +46,11 @@ public class ReaderController {
                                                                 "dd.MM.yyyy HH:mm")));
                             }
                         });
+        var active = new TableColumn<ReaderDto, String>("Активен");
+        active.setCellValueFactory(
+                c -> new SimpleStringProperty(c.getValue().active() ? "Да" : "Нет"));
+        readerTable.getColumns().add(active);
+        btnDelete.setText("Включить / отключить");
         btnAdd.setDisable(!ClientContext.api().isAdmin());
         btnEdit.setDisable(!ClientContext.api().isAdmin());
         btnDelete.setDisable(!ClientContext.api().isAdmin());
@@ -89,11 +94,20 @@ public class ReaderController {
             AlertHelper.showError("Выберите читателя");
             return;
         }
-        if (!AlertHelper.confirm("Удалить читателя «" + reader.fullName() + "»?")) return;
+        if (!AlertHelper.confirm(
+                (reader.active() ? "Отключить" : "Включить")
+                        + " читателя «"
+                        + reader.fullName()
+                        + "»?")) return;
         FxTasks.run(
                 view,
                 () -> {
-                    readers.delete(reader);
+                    ClientContext.api()
+                            .put(
+                                    "/api/readers/" + reader.id() + "/active",
+                                    new ru.mirea.library.dto.ActiveUpdate(
+                                            reader.version(), !reader.active()),
+                                    ru.mirea.library.dto.ReaderDto.class);
                     return null;
                 },
                 unused -> refresh());

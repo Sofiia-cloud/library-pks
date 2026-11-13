@@ -16,7 +16,21 @@ public class BookRequestApiClient {
     }
 
     public List<BookRequestDto> list(Map<String, ?> filters) {
-        return api.getList("/api/book-requests" + ApiClient.query(filters), BookRequestDto.class);
+        var all = new ArrayList<BookRequestDto>();
+        var f = new LinkedHashMap<String, Object>(filters);
+        f.put("size", 100);
+        for (int page = 0; ; page++) {
+            f.put("page", page);
+            var result = page(f);
+            all.addAll(result.items());
+            if (page + 1 >= result.totalPages()) return all;
+        }
+    }
+
+    public PageDto<BookRequestDto> page(Map<String, ?> filters) {
+        return api.get(
+                "/api/book-requests" + ApiClient.query(filters),
+                new com.fasterxml.jackson.core.type.TypeReference<PageDto<BookRequestDto>>() {});
     }
 
     public BookRequestDto get(UUID id) {

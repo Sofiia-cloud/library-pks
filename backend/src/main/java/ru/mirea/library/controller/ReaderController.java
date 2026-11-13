@@ -54,6 +54,11 @@ public class ReaderController {
                         body.libraryCardNumber()));
     }
 
+    @PutMapping("/{id}/active")
+    public ReaderDto active(@PathVariable("id") UUID id, @Valid @RequestBody ActiveUpdate body) {
+        return DtoMapper.reader(service.setActive(id, body.version(), body.active()));
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(

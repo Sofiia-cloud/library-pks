@@ -165,20 +165,20 @@ class ServicesIT {
     }
 
     @Test
-    void checksReaderLinksAndInactiveReaders() {
+    void disablesReadersWithoutLosingLinkedRequests() {
         withServices(services -> {
             Reader reader = reader(services, 1);
             BookRequest request = request(services, reader, "Книга");
-            assertThatThrownBy(() -> services.readers.delete(reader.getId(), 0)).isInstanceOf(BusinessException.class);
-            BookRequest cancelled = services.requests.changeStatus(request.getId(), 0, RequestStatus.CANCELLED);
-            assertThatThrownBy(() -> services.readers.delete(reader.getId(), 0)).isInstanceOf(BusinessException.class);
-            services.requests.delete(request.getId(), cancelled.getVersion());
             services.readers.delete(reader.getId(), 0);
-            assertThat(services.readers.existsById(reader.getId())).isFalse();
-            Reader disabled = reader(services, 2);
-            jdbc.update("UPDATE readers SET active = false WHERE id = ?", disabled.getId());
-            assertThatThrownBy(() -> request(services, disabled, "Не создавать")).isInstanceOf(BusinessException.class);
-            assertThat(services.requests.getAll()).isEmpty();
+            assertThat(services.readers.getById(reader.getId()).isActive()).isFalse();
+            assertThat(services.readers.existsById(reader.getId())).isTrue();
+            assertThatThrownBy(() -> request(services, reader, "Не создавать")).isInstanceOf(BusinessException.class);
+            BookRequest cancelled = services.requests.changeStatus(request.getId(), 0, RequestStatus.CANCELLED);
+            services.requests.delete(request.getId(), cancelled.getVersion());
+            assertThat(services.requests.getById(request.getId()).isArchived()).isTrue();
+            Reader enabled = services.readers.setActive(reader.getId(), 1, true);
+            assertThat(enabled.isActive()).isTrue();
+            assertThat(request(services, enabled, "Новая заявка")).isNotNull();
         });
     }
 
@@ -340,7 +340,7 @@ class ServicesIT {
     @TestConfiguration(proxyBeanMethods = false)
     @EntityScan(basePackageClasses = Reader.class)
     @EnableJpaRepositories(basePackageClasses = ReaderRepository.class)
-    @Import({ReaderService.class, BookRequestService.class, ReportService.class})
+    @Import({ReaderService.class, BookRequestService.class, ReportService.class, ru.mirea.library.service.AuditService.class})
     static class ServiceConfiguration {
     }
 }

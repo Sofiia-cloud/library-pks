@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.VBox?><?import javafx.geometry.Insets?>
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:id="view" fx:controller="ru.mirea.library.fx.controller.UsersController" spacing="12"><padding><Insets top="16" right="16" bottom="16" left="16"/></padding></VBox>

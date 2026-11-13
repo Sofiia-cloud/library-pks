@@ -19,6 +19,9 @@ public class RequestFormController {
     @FXML private ComboBox<RequestStatus> cbStatus;
     @FXML private TextField fieldBookTitle, fieldAuthor, fieldIsbn;
     @FXML private DatePicker dpReturnDate;
+    @FXML private Spinner<Integer> copies;
+    @FXML private CheckBox urgent;
+    @FXML private TextField tags, externalCode;
     @FXML private TextArea taComment;
     @FXML private Label lblError;
     @FXML private Button btnSave, btnCancel;
@@ -32,6 +35,7 @@ public class RequestFormController {
 
     @FXML
     private void initialize() {
+        copies.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 1));
         cbReader.setConverter(
                 new StringConverter<>() {
                     public String toString(ReaderDto r) {
@@ -84,6 +88,11 @@ public class RequestFormController {
         cbStatus.setValue(current);
         cbReader.setDisable(value != null);
         if (value != null) {
+            copies.getValueFactory().setValue(value.requestedCopies());
+            urgent.setSelected(value.urgent());
+            tags.setText(String.join(", ", new TreeSet<>(value.tags())));
+            externalCode.setText(value.externalCode());
+            externalCode.setDisable(true);
             fieldBookTitle.setText(value.bookTitle());
             fieldAuthor.setText(value.bookAuthor());
             fieldIsbn.setText(value.isbn());
@@ -106,6 +115,14 @@ public class RequestFormController {
         var status = cbStatus.getValue();
         lblError.setText("");
         BookRequestDto existing = request;
+        int count = copies.getValue();
+        boolean isUrgent = urgent.isSelected();
+        Set<String> tagNames =
+                Arrays.stream(tags.getText().split(","))
+                        .map(String::trim)
+                        .filter(t -> !t.isBlank())
+                        .collect(java.util.stream.Collectors.toSet());
+        String code = externalCode.getText().isBlank() ? null : externalCode.getText().trim();
         FxTasks.run(
                 form,
                 () ->
@@ -118,7 +135,11 @@ public class RequestFormController {
                                                 isbn,
                                                 due,
                                                 comment,
-                                                status))
+                                                status,
+                                                count,
+                                                isUrgent,
+                                                tagNames,
+                                                code))
                                 : requests.update(
                                         existing.id(),
                                         new BookRequestUpdate(
@@ -128,7 +149,10 @@ public class RequestFormController {
                                                 isbn,
                                                 due,
                                                 comment,
-                                                status)),
+                                                status,
+                                                count,
+                                                isUrgent,
+                                                tagNames)),
                 result -> {
                     saved = true;
                     close();
@@ -137,7 +161,7 @@ public class RequestFormController {
                     if (error instanceof ApiException api && api.status() == 409)
                         lblError.setText(
                                 "Запись изменена. Закройте форму, обновите список и повторите"
-                                    + " редактирование");
+                                        + " редактирование");
                     else if (error instanceof ApiException api && api.status() == 401)
                         FxTasks.showError(error);
                     else lblError.setText(error.getMessage());

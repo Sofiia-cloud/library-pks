@@ -74,10 +74,10 @@ public class FilterController extends RequestTableController {
                 });
         FxTasks.run(
                 view,
-                () -> new Loaded(new ReaderApiClient(ClientContext.api()).list(), requests.list()),
+                () -> new Loaded(new ReaderApiClient(ClientContext.api()).list(), List.of()),
                 data -> {
                     cmbReader.getItems().setAll(data.readers());
-                    showRecords(data.requests());
+                    load(Map.of());
                 });
     }
 

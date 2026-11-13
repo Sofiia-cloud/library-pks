@@ -56,8 +56,10 @@ public final class BookRequestSpecifications {
                             .when(RequestStatus.CANCELLED, 4)
                             .when(RequestStatus.REJECTED, 5)
                             .otherwise(6);
-            query.orderBy(
-                    ascending ? cb.asc(order) : cb.desc(order), cb.asc(root.get("requestNumber")));
+            if (query.getResultType() != Long.class && query.getResultType() != long.class)
+                query.orderBy(
+                        ascending ? cb.asc(order) : cb.desc(order),
+                        cb.asc(root.get("requestNumber")));
             return cb.conjunction();
         };
     }

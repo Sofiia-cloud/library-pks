@@ -22,7 +22,7 @@
     </top>
 
     <left>
-        <VBox spacing="10" styleClass="sidebar">
+        <VBox spacing="6" styleClass="sidebar">
             <padding>
                 <Insets top="16" right="16" bottom="16" left="16"/>
             </padding>
@@ -33,7 +33,10 @@
             <Button fx:id="btnFilter"      text="Фильтрация"      maxWidth="Infinity"/>
             <Button fx:id="btnSort"        text="Сортировка"      maxWidth="Infinity"/>
             <Button fx:id="btnStatistics"  text="Статистика"      maxWidth="Infinity"/>
-            <Button fx:id="btnExport"      text="Экспорт"         maxWidth="Infinity"/>
+            <Button fx:id="btnExport"      text="Экспорт Excel"         maxWidth="Infinity"/>
+            <Button fx:id="btnAnalytics" text="Аналитика" maxWidth="Infinity"/>
+            <Button fx:id="btnUsers" text="Пользователи" maxWidth="Infinity"/>
+            <Button fx:id="btnAudit" text="Аудит" maxWidth="Infinity"/>
             <Button fx:id="btnPassword" text="Сменить пароль" maxWidth="Infinity"/>
             <Button fx:id="btnLogout" text="Выйти" maxWidth="Infinity"/>
         </VBox>

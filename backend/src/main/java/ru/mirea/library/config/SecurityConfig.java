@@ -55,7 +55,7 @@ public class SecurityConfig {
                                                                 403,
                                                                 "FORBIDDEN",
                                                                 "Недостаточно прав для этой"
-                                                                    + " операции")))
+                                                                        + " операции")))
                 .authorizeHttpRequests(
                         auth ->
                                 auth.dispatcherTypeMatchers(DispatcherType.ERROR)
@@ -75,6 +75,13 @@ public class SecurityConfig {
                                         .requestMatchers(
                                                 "/api/auth/me", "/api/auth/change-password")
                                         .authenticated()
+                                        .requestMatchers("/api/admin/**")
+                                        .hasRole("ADMIN")
+                                        .requestMatchers(
+                                                HttpMethod.DELETE, "/api/book-requests/*/permanent")
+                                        .hasRole("ADMIN")
+                                        .requestMatchers(HttpMethod.DELETE, "/api/book-requests/**")
+                                        .hasRole("LIBRARIAN")
                                         .requestMatchers(HttpMethod.GET, "/api/**")
                                         .hasRole("VIEWER")
                                         .requestMatchers(HttpMethod.DELETE, "/api/**")
@@ -83,7 +90,10 @@ public class SecurityConfig {
                                         .hasRole("ADMIN")
                                         .requestMatchers(HttpMethod.PUT, "/api/readers/**")
                                         .hasRole("ADMIN")
-                                        .requestMatchers(HttpMethod.POST, "/api/book-requests")
+                                        .requestMatchers(
+                                                HttpMethod.POST,
+                                                "/api/book-requests",
+                                                "/api/book-requests/**")
                                         .hasRole("LIBRARIAN")
                                         .requestMatchers(HttpMethod.PUT, "/api/book-requests/**")
                                         .hasRole("LIBRARIAN")

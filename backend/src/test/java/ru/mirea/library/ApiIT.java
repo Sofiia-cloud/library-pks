@@ -79,6 +79,14 @@ class ApiIT {
 
     @BeforeEach
     void accounts() {
+        ((java.util.Map<?, ?>)
+                        org.springframework.test.util.ReflectionTestUtils.getField(
+                                context.getBean(ru.mirea.library.security.LoginRateLimiter.class),
+                                "attempts"))
+                .clear();
+        context.getBean(ImportBatchRepository.class).deleteAll();
+        context.getBean(NoteRepository.class).deleteAll();
+        context.getBean(AuditRepository.class).deleteAll();
         sessions.deleteAll();
         users.deleteAll();
         context.getBean(BookRequestRepository.class).deleteAll();
@@ -355,6 +363,7 @@ class ApiIT {
                                         null,
                                         token)
                                 .body()
+                                .get("items")
                                 .size())
                 .isEqualTo(1);
         assertThat(
@@ -407,7 +416,8 @@ class ApiIT {
                                         token)
                                 .status())
                 .isEqualTo(400);
-        assertThat(call("GET", "/api/book-requests", null, token).body().size()).isZero();
+        assertThat(call("GET", "/api/book-requests", null, token).body().get("items").size())
+                .isZero();
     }
 
     @Test
@@ -421,6 +431,613 @@ class ApiIT {
         assertThat(docs.path("components").path("securitySchemes").has("bearerAuth")).isTrue();
         assertThat(docs.path("paths").has("/api/auth/login")).isTrue();
         assertThat(docs.path("paths").has("/api/book-requests")).isTrue();
+    }
+
+    private ReaderDto reference(String token) throws Exception {
+        return json.treeToValue(
+                call(
+                                "POST",
+                                "/api/readers",
+                                new ReaderCreate(
+                                        "Тестовый читатель",
+                                        "reader@example.org",
+                                        null,
+                                        "LIB-0001"),
+                                token)
+                        .body(),
+                ReaderDto.class);
+    }
+
+    private BookRequestDto item(
+            String token, UUID reader, String title, int copies, boolean urgent, Set<String> tags)
+            throws Exception {
+        Response r =
+                call(
+                        "POST",
+                        "/api/book-requests",
+                        new BookRequestCreate(
+                                reader,
+                                title,
+                                "Автор",
+                                null,
+                                LocalDate.now().plusDays(8),
+                                null,
+                                RequestStatus.CREATED,
+                                copies,
+                                urgent,
+                                tags,
+                                null),
+                        token);
+        assertThat(r.status()).as(r.body().toString()).isEqualTo(201);
+        return json.treeToValue(r.body(), BookRequestDto.class);
+    }
+
+    @Test
+    void pagesFiltersAndAnalyticsUseTheSameDomainValues() throws Exception {
+        String token = login("admin").accessToken();
+        var reader = reference(token);
+        var one = item(token, reader.id(), "Alpha", 4, true, Set.of(" Учёба "));
+        item(token, reader.id(), "Beta", 1, false, Set.of());
+        item(token, reader.id(), "Gamma", 6, true, Set.of("учёба"));
+        Response page = call("GET", "/api/book-requests?size=1&page=1&sort=TITLE", null, token);
+        assertThat(page.status()).isEqualTo(200);
+        assertThat(page.body().get("items").get(0).get("bookTitle").asText()).isEqualTo("Beta");
+        assertThat(page.body().get("totalElements").asInt()).isEqualTo(3);
+        String tag = java.net.URLEncoder.encode("учёба", java.nio.charset.StandardCharsets.UTF_8);
+        Response filtered =
+                call(
+                        "GET",
+                        "/api/book-requests?urgent=true&tag="
+                                + tag
+                                + "&copiesOp=GE&copiesValue=5&readerId="
+                                + reader.id(),
+                        null,
+                        token);
+        assertThat(filtered.body().get("totalElements").asInt()).isEqualTo(1);
+        assertThat(call("GET", "/api/book-requests?size=101", null, token).status()).isEqualTo(400);
+        assertThat(call("GET", "/api/book-requests?scope=WRONG", null, token).status())
+                .isEqualTo(400);
+        assertThat(call("GET", "/api/book-requests?copiesOp=GE", null, token).status())
+                .isEqualTo(400);
+        assertThat(
+                        call("GET", "/api/book-requests?q=%27%20OR%201%3D1--", null, token)
+                                .body()
+                                .get("totalElements")
+                                .asInt())
+                .isZero();
+        var approved =
+                json.treeToValue(
+                        call(
+                                        "PUT",
+                                        "/api/book-requests/" + one.id() + "/status",
+                                        new StatusUpdate(one.version(), RequestStatus.APPROVED),
+                                        token)
+                                .body(),
+                        BookRequestDto.class);
+        var issued =
+                json.treeToValue(
+                        call(
+                                        "PUT",
+                                        "/api/book-requests/" + one.id() + "/status",
+                                        new StatusUpdate(approved.version(), RequestStatus.ISSUED),
+                                        token)
+                                .body(),
+                        BookRequestDto.class);
+        new JdbcTemplate(source)
+                .update(
+                        "UPDATE book_requests SET desired_return_date=? WHERE id=?",
+                        LocalDate.now().minusDays(1),
+                        issued.id());
+        assertThat(
+                        call("GET", "/api/book-requests?returnState=OVERDUE", null, token)
+                                .body()
+                                .get("totalElements")
+                                .asInt())
+                .isEqualTo(1);
+        var analytics = call("GET", "/api/analytics/summary", null, token);
+        assertThat(analytics.status()).isEqualTo(200);
+        assertThat(analytics.body().get("total").asInt()).isEqualTo(3);
+        assertThat(analytics.body().get("urgent").asInt()).isEqualTo(2);
+        assertThat(analytics.body().get("averageCopies").asDouble())
+                .isCloseTo(11.0 / 3, org.assertj.core.data.Offset.offset(.0001));
+        assertThat(analytics.body().get("byReturnState").get("OVERDUE").asInt()).isEqualTo(1);
+    }
+
+    @Test
+    void archivesRestoresAndPermanentlyDeletesOnlyAsAdministrator() throws Exception {
+        String admin = login("admin").accessToken(), lib = login("librarian").accessToken();
+        var reader = reference(admin);
+        var item = item(lib, reader.id(), "В архив", 2, false, Set.of("тег"));
+        assertThat(
+                        call(
+                                        "DELETE",
+                                        "/api/book-requests/"
+                                                + item.id()
+                                                + "?version="
+                                                + item.version(),
+                                        null,
+                                        lib)
+                                .status())
+                .isEqualTo(204);
+        var archived =
+                json.treeToValue(
+                        call("GET", "/api/book-requests/" + item.id(), null, lib).body(),
+                        BookRequestDto.class);
+        assertThat(archived.archived()).isTrue();
+        assertThat(call("GET", "/api/book-requests", null, lib).body().get("totalElements").asInt())
+                .isZero();
+        assertThat(
+                        call("GET", "/api/book-requests?scope=ARCHIVED", null, lib)
+                                .body()
+                                .get("totalElements")
+                                .asInt())
+                .isEqualTo(1);
+        assertThat(
+                        call(
+                                        "POST",
+                                        "/api/book-requests/" + item.id() + "/restore",
+                                        new VersionRequest(item.version()),
+                                        lib)
+                                .status())
+                .isEqualTo(409);
+        var restored =
+                json.treeToValue(
+                        call(
+                                        "POST",
+                                        "/api/book-requests/" + item.id() + "/restore",
+                                        new VersionRequest(archived.version()),
+                                        lib)
+                                .body(),
+                        BookRequestDto.class);
+        assertThat(restored.archived()).isFalse();
+        assertThat(
+                        call(
+                                        "DELETE",
+                                        "/api/book-requests/"
+                                                + item.id()
+                                                + "/permanent?version="
+                                                + restored.version(),
+                                        null,
+                                        admin)
+                                .status())
+                .isEqualTo(400);
+        call(
+                "DELETE",
+                "/api/book-requests/" + item.id() + "?version=" + restored.version(),
+                null,
+                lib);
+        archived =
+                json.treeToValue(
+                        call("GET", "/api/book-requests/" + item.id(), null, lib).body(),
+                        BookRequestDto.class);
+        assertThat(
+                        call(
+                                        "DELETE",
+                                        "/api/book-requests/"
+                                                + item.id()
+                                                + "/permanent?version="
+                                                + archived.version(),
+                                        null,
+                                        lib)
+                                .status())
+                .isEqualTo(403);
+        assertThat(
+                        call(
+                                        "DELETE",
+                                        "/api/book-requests/"
+                                                + item.id()
+                                                + "/permanent?version="
+                                                + archived.version(),
+                                        null,
+                                        admin)
+                                .status())
+                .isEqualTo(204);
+        assertThat(call("GET", "/api/book-requests/" + item.id(), null, admin).status())
+                .isEqualTo(404);
+        assertThat(
+                        call(
+                                        "PUT",
+                                        "/api/readers/" + reader.id() + "/active",
+                                        new ActiveUpdate(reader.version(), false),
+                                        admin)
+                                .status())
+                .isEqualTo(200);
+        assertThat(
+                        call(
+                                        "POST",
+                                        "/api/book-requests",
+                                        new BookRequestCreate(
+                                                reader.id(),
+                                                "Не создать",
+                                                "Автор",
+                                                null,
+                                                null,
+                                                null,
+                                                RequestStatus.CREATED),
+                                        lib)
+                                .status())
+                .isEqualTo(400);
+    }
+
+    @Test
+    void notesPreserveAuthorAndEnforceOwnershipAndVersion() throws Exception {
+        String admin = login("admin").accessToken(),
+                lib = login("librarian").accessToken(),
+                viewer = login("viewer").accessToken();
+        var reader = reference(admin);
+        var item = item(lib, reader.id(), "Заметки", 1, false, Set.of());
+        String path = "/api/book-requests/" + item.id() + "/notes";
+        assertThat(call("POST", path, new NoteWrite(null, "Заметка", true), viewer).status())
+                .isEqualTo(403);
+        var note =
+                json.treeToValue(
+                        call("POST", path, new NoteWrite(null, "Заметка", true), lib).body(),
+                        NoteDto.class);
+        account("other.editor", Role.LIBRARIAN, false, true);
+        String other = login("other.editor").accessToken();
+        assertThat(
+                        call(
+                                        "PUT",
+                                        path + "/" + note.id(),
+                                        new NoteWrite(note.version(), "Чужая правка", false),
+                                        other)
+                                .status())
+                .isEqualTo(403);
+        assertThat(
+                        call(
+                                        "DELETE",
+                                        path + "/" + note.id() + "?version=" + note.version(),
+                                        null,
+                                        other)
+                                .status())
+                .isEqualTo(403);
+        assertThat(note.authorLogin()).isEqualTo("librarian");
+        assertThat(note.pinned()).isTrue();
+        assertThat(call("GET", path, null, viewer).body().size()).isEqualTo(1);
+        var changed =
+                call(
+                        "PUT",
+                        path + "/" + note.id(),
+                        new NoteWrite(note.version(), "Правка", false),
+                        admin);
+        assertThat(changed.status()).isEqualTo(200);
+        assertThat(
+                        call(
+                                        "PUT",
+                                        path + "/" + note.id(),
+                                        new NoteWrite(note.version(), "Старая правка", false),
+                                        lib)
+                                .status())
+                .isEqualTo(409);
+        assertThat(
+                        call(
+                                        "DELETE",
+                                        path
+                                                + "/"
+                                                + note.id()
+                                                + "?version="
+                                                + changed.body().get("version").asLong(),
+                                        null,
+                                        admin)
+                                .status())
+                .isEqualTo(204);
+    }
+
+    @Test
+    void bulkCommitsValidItemsAndReportsStaleAndMissingItems() throws Exception {
+        String admin = login("admin").accessToken(), lib = login("librarian").accessToken();
+        var reader = reference(admin);
+        var one = item(lib, reader.id(), "Первая", 1, false, Set.of());
+        var two = item(lib, reader.id(), "Вторая", 1, false, Set.of());
+        var result =
+                call(
+                        "POST",
+                        "/api/book-requests/bulk",
+                        new BulkRequest(
+                                List.of(
+                                        new VersionedId(one.id(), one.version()),
+                                        new VersionedId(two.id(), two.version() + 1),
+                                        new VersionedId(UUID.randomUUID(), 0L)),
+                                BulkAction.ARCHIVE,
+                                null,
+                                null),
+                        lib);
+        assertThat(result.status()).isEqualTo(200);
+        assertThat(result.body().get("successful").asInt()).isEqualTo(1);
+        assertThat(result.body().get("failed").asInt()).isEqualTo(2);
+        assertThat(
+                        call("GET", "/api/book-requests/" + one.id(), null, lib)
+                                .body()
+                                .get("archived")
+                                .asBoolean())
+                .isTrue();
+        assertThat(
+                        call("GET", "/api/book-requests/" + two.id(), null, lib)
+                                .body()
+                                .get("archived")
+                                .asBoolean())
+                .isFalse();
+        var tags =
+                call(
+                        "POST",
+                        "/api/book-requests/bulk",
+                        new BulkRequest(
+                                List.of(new VersionedId(two.id(), two.version())),
+                                BulkAction.ADD_TAG,
+                                null,
+                                "Тест"),
+                        lib);
+        assertThat(tags.body().get("successful").asInt()).isEqualTo(1);
+        var tagged =
+                json.treeToValue(
+                        call("GET", "/api/book-requests/" + two.id(), null, lib).body(),
+                        BookRequestDto.class);
+        assertThat(tagged.tags()).containsExactly("тест");
+        assertThat(tagged.version()).isGreaterThan(two.version());
+        assertThat(
+                        call(
+                                        "POST",
+                                        "/api/book-requests/bulk",
+                                        new BulkRequest(
+                                                List.of(new VersionedId(two.id(), two.version())),
+                                                BulkAction.REMOVE_TAG,
+                                                null,
+                                                "тест"),
+                                        lib)
+                                .body()
+                                .get("failed")
+                                .asInt())
+                .isEqualTo(1);
+    }
+
+    @Test
+    void administratorsCreateResetAndDisableUsersWithoutReturningPasswords() throws Exception {
+        String admin = login("admin").accessToken(), viewer = login("viewer").accessToken();
+        assertThat(call("GET", "/api/admin/users", null, viewer).status()).isEqualTo(403);
+        var created =
+                call(
+                        "POST",
+                        "/api/admin/users",
+                        new AdminUserCreate(
+                                "new.user", "Новый", Set.of(Role.LIBRARIAN), "TemporaryPass123!"),
+                        admin);
+        assertThat(created.status()).isEqualTo(200);
+        assertThat(created.body().toString())
+                .doesNotContain("TemporaryPass123!", "passwordHash", "$2");
+        var u = json.treeToValue(created.body(), AdminUserDto.class);
+        var temp =
+                json.treeToValue(
+                        call(
+                                        "POST",
+                                        "/api/auth/login",
+                                        new LoginRequest(u.login(), "TemporaryPass123!"),
+                                        null)
+                                .body(),
+                        TokenResponse.class);
+        assertThat(temp.user().mustChangePassword()).isTrue();
+        var reset =
+                call(
+                        "POST",
+                        "/api/admin/users/" + u.id() + "/reset-password",
+                        new PasswordReset(u.version(), "ResetPassword123!"),
+                        admin);
+        assertThat(reset.status()).isEqualTo(200);
+        assertThat(call("GET", "/api/auth/me", null, temp.accessToken()).status()).isEqualTo(401);
+        u = json.treeToValue(reset.body(), AdminUserDto.class);
+        var disabled =
+                call(
+                        "PUT",
+                        "/api/admin/users/" + u.id(),
+                        new AdminUserUpdate(
+                                u.version(),
+                                "renamed.user",
+                                "Новое имя",
+                                Set.of(Role.VIEWER),
+                                false),
+                        admin);
+        assertThat(disabled.status()).isEqualTo(200);
+        assertThat(
+                        call(
+                                        "POST",
+                                        "/api/auth/login",
+                                        new LoginRequest("renamed.user", "ResetPassword123!"),
+                                        null)
+                                .status())
+                .isEqualTo(401);
+        assertThat(call("GET", "/api/admin/users?size=1", null, admin).body().get("items").size())
+                .isEqualTo(1);
+        assertThat(call("GET", "/api/admin/users?size=101", null, admin).status()).isEqualTo(400);
+        var self = users.findByLoginIgnoreCase("admin").orElseThrow();
+        assertThat(
+                        call(
+                                        "PUT",
+                                        "/api/admin/users/" + self.getId(),
+                                        new AdminUserUpdate(
+                                                self.getVersion(),
+                                                "admin",
+                                                "admin",
+                                                Set.of(Role.VIEWER),
+                                                true),
+                                        admin)
+                                .status())
+                .isEqualTo(400);
+    }
+
+    @Test
+    void auditIsAdminOnlySearchableAndCarriesCorrelationId() throws Exception {
+        String admin = login("admin").accessToken(), viewer = login("viewer").accessToken();
+        var reader = reference(admin);
+        String cid = "test-correlation-123";
+        var response =
+                http.send(
+                        HttpRequest.newBuilder(URI.create(base + "/api/book-requests"))
+                                .header("Authorization", "Bearer " + admin)
+                                .header("X-Correlation-ID", cid)
+                                .header("Content-Type", "application/json")
+                                .POST(
+                                        HttpRequest.BodyPublishers.ofString(
+                                                json.writeValueAsString(
+                                                        new BookRequestCreate(
+                                                                reader.id(),
+                                                                "Аудит",
+                                                                "Автор",
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                RequestStatus.CREATED))))
+                                .build(),
+                        HttpResponse.BodyHandlers.ofString());
+        assertThat(response.statusCode()).isEqualTo(201);
+        assertThat(response.headers().firstValue("X-Correlation-ID")).contains(cid);
+        assertThat(call("GET", "/api/admin/audit", null, viewer).status()).isEqualTo(403);
+        var audit =
+                call("GET", "/api/admin/audit?q=" + cid + "&sort=actorLogin&size=1", null, admin);
+        assertThat(audit.status()).isEqualTo(200);
+        assertThat(audit.body().get("items").get(0).get("correlationId").asText()).isEqualTo(cid);
+        assertThat(audit.body().toString()).doesNotContain(PASSWORD, "accessToken", "passwordHash");
+        assertThat(call("GET", "/api/admin/audit?sort=unsafe", null, admin).status())
+                .isEqualTo(400);
+    }
+
+    private static final String CSV_HEADER =
+            "externalCode,readerCard,bookTitle,bookAuthor,isbn,status,desiredReturnDate,comment,requestedCopies,urgent,tags\r\n";
+
+    @Test
+    void previewsCsvWithoutMutatingDataAppliesOnceAndRejectsStaleUpdates() throws Exception {
+        String admin = login("admin").accessToken(), lib = login("librarian").accessToken();
+        reference(admin);
+        String content =
+                CSV_HEADER + "EXT-01,LIB-0001,Импорт,Автор,,CREATED,,,3,true,учёба|java\r\n";
+        var checked =
+                call(
+                        "POST",
+                        "/api/book-requests/import/preview",
+                        new CsvPreviewRequest(content, ImportMode.NEW_ONLY),
+                        lib);
+        assertThat(checked.status()).as(checked.body().toString()).isEqualTo(200);
+        var preview = json.treeToValue(checked.body(), CsvPreview.class);
+        assertThat(preview.validRows()).isEqualTo(1);
+        assertThat(preview.invalidRows()).isZero();
+        assertThat(call("GET", "/api/book-requests", null, lib).body().get("totalElements").asInt())
+                .isZero();
+        assertThat(
+                        call(
+                                        "POST",
+                                        "/api/book-requests/import/apply",
+                                        new CsvApply(preview.id()),
+                                        admin)
+                                .status())
+                .isEqualTo(403);
+        var applied =
+                call("POST", "/api/book-requests/import/apply", new CsvApply(preview.id()), lib);
+        assertThat(applied.status()).as(applied.body().toString()).isEqualTo(200);
+        assertThat(applied.body().get("created").asInt()).isEqualTo(1);
+        assertThat(
+                        call(
+                                        "POST",
+                                        "/api/book-requests/import/apply",
+                                        new CsvApply(preview.id()),
+                                        lib)
+                                .body())
+                .isEqualTo(applied.body());
+        var page = call("GET", "/api/book-requests", null, lib);
+        var item = json.treeToValue(page.body().get("items").get(0), BookRequestDto.class);
+        assertThat(item.externalCode()).isEqualTo("EXT-01");
+        assertThat(item.tags()).containsExactlyInAnyOrder("учёба", "java");
+        var up =
+                json.treeToValue(
+                        call(
+                                        "POST",
+                                        "/api/book-requests/import/preview",
+                                        new CsvPreviewRequest(
+                                                content.replace("Импорт", "Обновлено"),
+                                                ImportMode.UPSERT),
+                                        lib)
+                                .body(),
+                        CsvPreview.class);
+        assertThat(
+                        call("POST", "/api/book-requests/import/apply", new CsvApply(up.id()), lib)
+                                .body()
+                                .get("updated")
+                                .asInt())
+                .isEqualTo(1);
+        var stale =
+                json.treeToValue(
+                        call(
+                                        "POST",
+                                        "/api/book-requests/import/preview",
+                                        new CsvPreviewRequest(content, ImportMode.UPSERT),
+                                        lib)
+                                .body(),
+                        CsvPreview.class);
+        var current =
+                json.treeToValue(
+                        call("GET", "/api/book-requests/" + item.id(), null, lib).body(),
+                        BookRequestDto.class);
+        call(
+                "PUT",
+                "/api/book-requests/" + item.id() + "/status",
+                new StatusUpdate(current.version(), RequestStatus.APPROVED),
+                lib);
+        assertThat(
+                        call(
+                                        "POST",
+                                        "/api/book-requests/import/apply",
+                                        new CsvApply(stale.id()),
+                                        lib)
+                                .status())
+                .isEqualTo(409);
+        var bad =
+                json.treeToValue(
+                        call(
+                                        "POST",
+                                        "/api/book-requests/import/preview",
+                                        new CsvPreviewRequest(content, ImportMode.NEW_ONLY),
+                                        lib)
+                                .body(),
+                        CsvPreview.class);
+        assertThat(bad.invalidRows()).isEqualTo(1);
+        assertThat(
+                        call("POST", "/api/book-requests/import/apply", new CsvApply(bad.id()), lib)
+                                .status())
+                .isEqualTo(400);
+    }
+
+    @Test
+    void csvExportsRespectFilterAndRoundTripQuotedValues() throws Exception {
+        String token = login("admin").accessToken();
+        var reader = reference(token);
+        item(token, reader.id(), "=SUM(1,2) \"цитата\"\nстрока", 2, true, Set.of("csv"));
+        item(token, reader.id(), "Обычная", 1, false, Set.of());
+        var response =
+                http.send(
+                        HttpRequest.newBuilder(
+                                        URI.create(base + "/api/book-requests/export?urgent=true"))
+                                .header("Authorization", "Bearer " + token)
+                                .GET()
+                                .build(),
+                        HttpResponse.BodyHandlers.ofString());
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).contains("'=SUM").doesNotContain("Обычная");
+        var preview =
+                json.treeToValue(
+                        call(
+                                        "POST",
+                                        "/api/book-requests/import/preview",
+                                        new CsvPreviewRequest(response.body(), ImportMode.UPSERT),
+                                        token)
+                                .body(),
+                        CsvPreview.class);
+        assertThat(preview.validRows()).isEqualTo(1);
+        assertThat(preview.invalidRows()).isZero();
+        assertThat(
+                        call(
+                                        "POST",
+                                        "/api/book-requests/import/apply",
+                                        new CsvApply(preview.id()),
+                                        token)
+                                .status())
+                .isEqualTo(200);
     }
 
     private TokenResponse login(String login) throws Exception {

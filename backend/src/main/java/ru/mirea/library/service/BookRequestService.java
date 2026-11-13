@@ -26,36 +26,31 @@ public class BookRequestService {
     private static final Sort BY_NUMBER = Sort.by("requestNumber");
     private final BookRequestRepository repository;
     private final ReaderService readers;
+    private final AuditService audit;
+    private final ru.mirea.library.repository.TagRepository tags;
 
-    public BookRequestService(BookRequestRepository repository, ReaderService readers) {
+    public BookRequestService(
+            BookRequestRepository repository,
+            ReaderService readers,
+            AuditService audit,
+            ru.mirea.library.repository.TagRepository tags) {
         this.repository = repository;
         this.readers = readers;
+        this.audit = audit;
+        this.tags = tags;
     }
 
     @Transactional
     public BookRequest create(
             UUID readerId,
-            String bookTitle,
-            String bookAuthor,
+            String title,
+            String author,
             String isbn,
-            LocalDate desiredReturnDate,
+            LocalDate due,
             String comment) {
-        String title = required(bookTitle, "Название книги", 200);
-        String author = required(bookAuthor, "Автор", 150);
-        String normalizedIsbn = optional(isbn, "ISBN", 20);
-        validateNewReturnDate(desiredReturnDate);
-        Reader reader = readers.getById(readerId);
-        if (!reader.isActive())
-            throw new BusinessException("Нельзя создать заявку для отключённого читателя");
-        BookRequest request =
-                new BookRequest(
-                        reader,
-                        title,
-                        author,
-                        normalizedIsbn,
-                        desiredReturnDate,
-                        optionalText(comment));
-        return repository.saveAndFlush(request);
+        return create(
+                new ru.mirea.library.dto.BookRequestCreate(
+                        readerId, title, author, isbn, due, comment, RequestStatus.CREATED));
     }
 
     @Transactional
@@ -67,10 +62,9 @@ public class BookRequestService {
             LocalDate due,
             String comment,
             RequestStatus status) {
-        BookRequest request = create(readerId, title, author, isbn, due, comment);
-        validateTransition(RequestStatus.CREATED, status);
-        request.setStatus(status);
-        return repository.saveAndFlush(request);
+        return create(
+                new ru.mirea.library.dto.BookRequestCreate(
+                        readerId, title, author, isbn, due, comment, status));
     }
 
     public List<BookRequest> list(
@@ -135,6 +129,21 @@ public class BookRequestService {
     public BookRequest update(
             UUID id,
             long version,
+            String title,
+            String author,
+            String isbn,
+            LocalDate due,
+            String comment,
+            RequestStatus status) {
+        var r = updateFields(id, version, title, author, isbn, due, comment, status);
+        repository.saveAndFlush(r);
+        audit.record("UPDATE", "REQUEST", id, "Изменена заявка");
+        return r;
+    }
+
+    private BookRequest updateFields(
+            UUID id,
+            long version,
             String bookTitle,
             String bookAuthor,
             String isbn,
@@ -143,6 +152,7 @@ public class BookRequestService {
             RequestStatus status) {
         BookRequest request = getById(id);
         checkVersion(request, version);
+        requireActive(request);
         String title = required(bookTitle, "Название книги", 200);
         String author = required(bookAuthor, "Автор", 150);
         String normalizedIsbn = optional(isbn, "ISBN", 20);
@@ -153,29 +163,158 @@ public class BookRequestService {
         request.setBookAuthor(author);
         request.setIsbn(normalizedIsbn);
         request.setDesiredReturnDate(desiredReturnDate);
-        request.setComment(optionalText(comment));
+        request.setComment(optional(comment, "Комментарий", 4000));
         request.setStatus(status);
-        return repository.saveAndFlush(request);
+        return request;
     }
 
     @Transactional
     public BookRequest changeStatus(UUID id, long version, RequestStatus status) {
         BookRequest request = getById(id);
         checkVersion(request, version);
+        requireActive(request);
         validateTransition(request.getStatus(), status);
         request.setStatus(status);
-        return repository.saveAndFlush(request);
+        repository.saveAndFlush(request);
+        audit.record("STATUS", "REQUEST", id, "Изменён статус: " + status);
+        return request;
     }
 
     @Transactional
-    public void delete(UUID id, long version) {
+    public BookRequest delete(UUID id, long version) {
         BookRequest request = getById(id);
         checkVersion(request, version);
         if (request.getStatus() == RequestStatus.ISSUED) {
-            throw new BusinessException("Нельзя удалить заявку со статусом ISSUED");
+            throw new BusinessException("Сначала оформите возврат выданной книги");
         }
-        repository.delete(request);
+        request.setArchived(true);
+        repository.saveAndFlush(request);
+        audit.record("ARCHIVE", "REQUEST", id, "Заявка в архиве");
+        return request;
+    }
+
+    @Transactional
+    public BookRequest restore(UUID id, long version) {
+        BookRequest r = getById(id);
+        checkVersion(r, version);
+        r.setArchived(false);
+        repository.saveAndFlush(r);
+        audit.record("RESTORE", "REQUEST", id, "Заявка восстановлена");
+        return r;
+    }
+
+    @Transactional
+    public void permanent(UUID id, long version) {
+        BookRequest r = getById(id);
+        checkVersion(r, version);
+        if (!r.isArchived()) throw new BusinessException("Сначала переместите заявку в архив");
+        repository.delete(r);
         repository.flush();
+        audit.record("DELETE", "REQUEST", id, "Заявка удалена окончательно");
+    }
+
+    @Transactional
+    public BookRequest create(ru.mirea.library.dto.BookRequestCreate b) {
+        String title = required(b.bookTitle(), "Название книги", 200),
+                author = required(b.bookAuthor(), "Автор", 150),
+                isbn = optional(b.isbn(), "ISBN", 20),
+                comment = optional(b.comment(), "Комментарий", 4000);
+        validateNewReturnDate(b.desiredReturnDate());
+        validateTransition(RequestStatus.CREATED, b.status());
+        Reader reader = readers.getById(b.readerId());
+        if (!reader.isActive())
+            throw new BusinessException("Нельзя создать заявку для отключённого читателя");
+        var resolved = resolveTags(b.tags());
+        var r = new BookRequest(reader, title, author, isbn, b.desiredReturnDate(), comment);
+        r.setStatus(b.status());
+        if (b.externalCode() != null) {
+            String code = b.externalCode().trim();
+            if (!code.matches("[A-Za-z0-9._-]{1,64}"))
+                throw new BusinessException("Некорректный внешний код");
+            r.setExternalCode(code);
+        }
+        metadata(r, b.requestedCopies(), b.urgent(), resolved);
+        repository.saveAndFlush(r);
+        audit.record("CREATE", "REQUEST", r.getId(), "Создана заявка");
+        return r;
+    }
+
+    @Transactional
+    public BookRequest update(UUID id, ru.mirea.library.dto.BookRequestUpdate b) {
+        var resolved = resolveTags(b.tags());
+        var r =
+                updateFields(
+                        id,
+                        b.version(),
+                        b.bookTitle(),
+                        b.bookAuthor(),
+                        b.isbn(),
+                        b.desiredReturnDate(),
+                        b.comment(),
+                        b.status());
+        metadata(r, b.requestedCopies(), b.urgent(), resolved);
+        repository.saveAndFlush(r);
+        audit.record("UPDATE", "REQUEST", id, "Изменена заявка");
+        return r;
+    }
+
+    private void metadata(
+            BookRequest r,
+            int copies,
+            boolean urgent,
+            java.util.Set<ru.mirea.library.domain.Tag> values) {
+        if (copies < 1 || copies > 1000) throw new BusinessException("Количество от 1 до 1000");
+        r.setRequestedCopies(copies);
+        r.setUrgent(urgent);
+        r.setTags(values);
+    }
+
+    public static java.util.Set<String> normalizeTags(java.util.Set<String> names) {
+        var result = new java.util.TreeSet<String>();
+        if (names == null) return result;
+        for (String raw : names) {
+            if (raw == null) throw new BusinessException("Пустой тег");
+            String n = raw.trim().toLowerCase(java.util.Locale.ROOT);
+            if (n.isBlank()
+                    || n.length() > 60
+                    || n.contains("|")
+                    || n.contains("\n")
+                    || n.contains("\r"))
+                throw new BusinessException("Тег: 1–60 символов, без | и переноса строки");
+            result.add(n);
+        }
+        if (result.size() > 20) throw new BusinessException("Не более 20 тегов");
+        return result;
+    }
+
+    private java.util.Set<ru.mirea.library.domain.Tag> resolveTags(java.util.Set<String> names) {
+        var result = new java.util.HashSet<ru.mirea.library.domain.Tag>();
+        for (String n : normalizeTags(names)) {
+            tags.insertIfMissing(n);
+            result.add(tags.findById(n).orElseThrow());
+        }
+        return result;
+    }
+
+    @Transactional
+    public BookRequest changeTag(UUID id, long version, String tag, boolean add) {
+        BookRequest r = getById(id);
+        checkVersion(r, version);
+        requireActive(r);
+        var names =
+                r.getTags().stream()
+                        .map(ru.mirea.library.domain.Tag::getName)
+                        .collect(java.util.stream.Collectors.toSet());
+        if (add) names.add(tag);
+        else names.remove(normalizeTags(java.util.Set.of(tag)).iterator().next());
+        r.setTags(resolveTags(names));
+        repository.saveAndFlush(r);
+        audit.record("TAGS", "REQUEST", id, "Изменены теги");
+        return r;
+    }
+
+    private static void requireActive(BookRequest r) {
+        if (r.isArchived()) throw new BusinessException("Сначала восстановите заявку из архива");
     }
 
     public List<BookRequest> searchByTitle(String text) {

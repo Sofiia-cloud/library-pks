@@ -9,7 +9,14 @@ import ru.mirea.library.domain.UserAccount;
 
 import java.util.*;
 
-public interface UserAccountRepository extends JpaRepository<UserAccount, UUID> {
+public interface UserAccountRepository
+        extends JpaRepository<UserAccount, UUID>, JpaSpecificationExecutor<UserAccount> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+            "select u from UserAccount u where u.active=true and :role member of u.roles order by"
+                    + " u.id")
+    List<UserAccount> lockAdministrators(@Param("role") ru.mirea.library.model.Role role);
+
     Optional<UserAccount> findByLoginIgnoreCase(String login);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

@@ -37,6 +37,7 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler({
+        org.springframework.validation.BindException.class,
         HttpMessageNotReadableException.class,
         MethodArgumentTypeMismatchException.class,
         MissingServletRequestParameterException.class,

@@ -23,4 +23,7 @@ public record BookRequestDto(
         boolean urgent,
         boolean archived,
         LocalDateTime updatedAt,
-        long version) {}
+        long version,
+        String externalCode,
+        Set<String> tags,
+        ru.mirea.library.model.ReturnState returnState) {}

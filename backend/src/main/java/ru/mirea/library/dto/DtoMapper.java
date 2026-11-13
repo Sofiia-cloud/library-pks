@@ -36,6 +36,10 @@ public final class DtoMapper {
                 b.isUrgent(),
                 b.isArchived(),
                 b.getUpdatedAt(),
-                b.getVersion());
+                b.getVersion(),
+                b.getExternalCode(),
+                b.getTags().stream().map(Tag::getName).collect(java.util.stream.Collectors.toSet()),
+                ru.mirea.library.model.ReturnState.calculate(
+                        b.getStatus(), b.getDesiredReturnDate(), java.time.LocalDate.now()));
     }
 }

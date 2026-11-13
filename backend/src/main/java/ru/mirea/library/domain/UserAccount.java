@@ -60,6 +60,27 @@ public class UserAccount {
         createdAt = Instant.now();
     }
 
+    public void setLogin(String value) {
+        login = value;
+    }
+
+    public void setName(String value) {
+        name = value;
+    }
+
+    public void setRoles(Set<Role> value) {
+        roles.clear();
+        roles.addAll(value);
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+
     public UUID getId() {
         return id;
     }

@@ -22,35 +22,38 @@ public class AuthService {
     private final PasswordPolicy policy;
     private final TokenService tokens;
     private final String dummyHash;
+    private final AuditService audit;
 
     public AuthService(
             UserAccountRepository users,
             RefreshSessionRepository sessions,
             PasswordEncoder passwords,
             PasswordPolicy policy,
-            TokenService tokens) {
+            TokenService tokens,
+            AuditService audit) {
         this.users = users;
         this.sessions = sessions;
         this.passwords = passwords;
         this.policy = policy;
         this.tokens = tokens;
+        this.audit = audit;
         dummyHash = passwords.encode("dummy-account-password");
     }
 
     @Transactional(noRollbackFor = BadCredentialsException.class)
     public TokenResponse login(LoginRequest request) {
         if (request.password().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72)
-            throw denied();
+            throw loginDenied();
         String login = request.login().trim().toLowerCase(Locale.ROOT);
         UserAccount user = users.lockByLogin(login).orElse(null);
         if (user == null) {
             passwords.matches(request.password(), dummyHash);
-            throw denied();
+            throw loginDenied();
         }
         Instant now = Instant.now();
         if (!user.isActive()
                 || (user.getLockedUntil() != null && user.getLockedUntil().isAfter(now)))
-            throw denied();
+            throw loginDenied();
         if (user.getLockedUntil() != null) {
             user.setLockedUntil(null);
             user.setFailedAttempts(0);
@@ -59,7 +62,7 @@ public class AuthService {
             user.setFailedAttempts(user.getFailedAttempts() + 1);
             if (user.getFailedAttempts() >= 5) user.setLockedUntil(now.plusSeconds(900));
             users.saveAndFlush(user);
-            throw denied();
+            throw loginDenied();
         }
         user.setFailedAttempts(0);
         user.setLockedUntil(null);
@@ -69,6 +72,7 @@ public class AuthService {
                 sessions.saveAndFlush(
                         new RefreshSession(
                                 user, tokens.hash(refresh), now, tokens.refreshExpiry()));
+        audit.recordAs(user.getLogin(), "LOGIN", "USER", user.getId(), "Вход в систему");
         return response(session, refresh);
     }
 
@@ -93,6 +97,12 @@ public class AuthService {
                         session -> {
                             session.setRevoked(true);
                             sessions.saveAndFlush(session);
+                            audit.recordAs(
+                                    session.getUser().getLogin(),
+                                    "LOGOUT",
+                                    "USER",
+                                    session.getUser().getId(),
+                                    "Выход из системы");
                         });
     }
 
@@ -121,6 +131,7 @@ public class AuthService {
         user.setLockedUntil(null);
         users.saveAndFlush(user);
         sessions.revokeForUser(user.getId());
+        audit.recordAs(user.getLogin(), "PASSWORD_CHANGE", "USER", user.getId(), "Изменён пароль");
     }
 
     private TokenResponse response(RefreshSession session, String refresh) {
@@ -136,6 +147,11 @@ public class AuthService {
                 user.getName(),
                 user.getRoles(),
                 user.isMustChangePassword());
+    }
+
+    private BadCredentialsException loginDenied() {
+        audit.recordAs("anonymous", "LOGIN_FAILED", "USER", null, "Отклонён вход");
+        return denied();
     }
 
     private static BadCredentialsException denied() {

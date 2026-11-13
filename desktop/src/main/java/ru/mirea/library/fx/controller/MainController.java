@@ -23,7 +23,7 @@ public class MainController {
 
     @FXML private StackPane contentPane;
     @FXML private Label lblUser;
-    @FXML private Button btnPassword, btnLogout;
+    @FXML private Button btnPassword, btnLogout, btnUsers, btnAudit, btnAnalytics;
 
     @FXML private Button btnReaders;
     @FXML private Button btnRequests;
@@ -54,6 +54,13 @@ public class MainController {
         btnFilter.setOnAction(e -> openView("/fxml/filter-view.fxml", "Фильтрация"));
         btnSort.setOnAction(e -> openView("/fxml/sort-view.fxml", "Сортировка"));
         btnStatistics.setOnAction(e -> openView("/fxml/statistics-view.fxml", "Статистика"));
+        btnUsers.setVisible(ClientContext.api().isAdmin());
+        btnUsers.setManaged(ClientContext.api().isAdmin());
+        btnAudit.setVisible(ClientContext.api().isAdmin());
+        btnAudit.setManaged(ClientContext.api().isAdmin());
+        btnUsers.setOnAction(e -> openView("/fxml/users-view.fxml", "Пользователи"));
+        btnAudit.setOnAction(e -> openView("/fxml/audit-view.fxml", "Аудит"));
+        btnAnalytics.setOnAction(e -> openView("/fxml/analytics-view.fxml", "Аналитика"));
         btnExport.setOnAction(e -> exportRequests());
     }
 

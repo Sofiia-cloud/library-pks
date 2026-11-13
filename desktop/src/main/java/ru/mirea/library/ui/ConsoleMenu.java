@@ -30,8 +30,8 @@ public class ConsoleMenu {
                         "\nБИБЛИОТЕКА — " + api.user().name() + " " + api.user().roles());
                 System.out.println(
                         "1. Читатели  2. Заявки  3. Поиск  4. Фильтры  5. Сортировка\n"
-                            + "6. Статистика  7. Отчёты  8. Просмотр данных  9. Экспорт Excel\n"
-                            + "10. Сменить пароль  11. Выйти из учётной записи  0. Завершить");
+                                + "6. Статистика  7. Отчёты  8. Просмотр данных  9. Экспорт Excel\n"
+                                + "10. Сменить пароль  11. Выйти из учётной записи  0. Завершить");
                 try {
                     switch (InputHelper.readInt("Выбор: ")) {
                         case 1 -> readerMenu();
@@ -104,7 +104,8 @@ public class ConsoleMenu {
     }
 
     private void readerMenu() {
-        System.out.println("1. Список  2. Найти по UUID  3. Создать  4. Изменить  5. Удалить");
+        System.out.println(
+                "1. Список  2. Найти по UUID  3. Создать  4. Изменить  5. Включить / отключить");
         switch (InputHelper.readInt("Выбор: ")) {
             case 1 -> readers.list().forEach(System.out::println);
             case 2 -> System.out.println(readers.get(uuid("UUID читателя: ")));
@@ -125,8 +126,12 @@ public class ConsoleMenu {
             }
             case 5 -> {
                 ReaderDto reader = readers.get(uuid("UUID читателя: "));
-                if (InputHelper.readYesNo("Удалить " + reader.fullName() + "? "))
-                    readers.delete(reader);
+                if (InputHelper.readYesNo(
+                        (reader.active() ? "Отключить " : "Включить ") + reader.fullName() + "? "))
+                    api.put(
+                            "/api/readers/" + reader.id() + "/active",
+                            new ActiveUpdate(reader.version(), !reader.active()),
+                            ReaderDto.class);
             }
             default -> {}
         }
@@ -142,8 +147,8 @@ public class ConsoleMenu {
 
     private void requestMenu() {
         System.out.println(
-                "1. Список  2. Найти по UUID  3. Создать  4. Изменить  5. Удалить  6. Сменить"
-                    + " статус");
+                "1. Список  2. Найти по UUID  3. Создать  4. Изменить  5. В архив  6. Сменить"
+                        + " статус  7. Архив  8. Восстановить  9. Удалить навсегда");
         switch (InputHelper.readInt("Выбор: ")) {
             case 1 -> requests.list().forEach(System.out::println);
             case 2 -> System.out.println(requests.get(uuid("UUID заявки: ")));
@@ -166,17 +171,40 @@ public class ConsoleMenu {
                                         fields.isbn(),
                                         fields.desiredReturnDate(),
                                         fields.comment(),
-                                        fields.status())));
+                                        fields.status(),
+                                        fields.requestedCopies(),
+                                        fields.urgent(),
+                                        fields.tags())));
             }
             case 5 -> {
                 BookRequestDto old = requests.get(uuid("UUID заявки: "));
-                if (InputHelper.readYesNo("Удалить заявку №" + old.requestNumber() + "? "))
+                if (InputHelper.readYesNo("Архивировать заявку №" + old.requestNumber() + "? "))
                     requests.delete(old);
             }
             case 6 -> {
                 BookRequestDto old = requests.get(uuid("UUID заявки: "));
                 System.out.println("Сейчас: " + old.status());
                 System.out.println(requests.status(old, status()));
+            }
+            case 7 ->
+                    requests.list(Map.of("scope", ArchiveScope.ARCHIVED))
+                            .forEach(System.out::println);
+            case 8 -> {
+                var old = requests.get(uuid("UUID заявки: "));
+                System.out.println(
+                        api.post(
+                                "/api/book-requests/" + old.id() + "/restore",
+                                new VersionRequest(old.version()),
+                                BookRequestDto.class));
+            }
+            case 9 -> {
+                var old = requests.get(uuid("UUID заявки: "));
+                if (InputHelper.readYesNo("Окончательно удалить архивную заявку? "))
+                    api.delete(
+                            "/api/book-requests/"
+                                    + old.id()
+                                    + "/permanent?version="
+                                    + old.version());
             }
             default -> {}
         }
@@ -190,7 +218,14 @@ public class ConsoleMenu {
                 InputHelper.readString("ISBN: "),
                 InputHelper.readOptionalDate("Вернуть до (дд.мм.гггг, Enter — без даты): "),
                 InputHelper.readString("Комментарий: "),
-                status());
+                status(),
+                InputHelper.readInt("Количество экземпляров (1–1000): "),
+                InputHelper.readYesNo("Срочная заявка? "),
+                Arrays.stream(InputHelper.readString("Теги через запятую: ").split(","))
+                        .map(String::trim)
+                        .filter(t -> !t.isBlank())
+                        .collect(java.util.stream.Collectors.toSet()),
+                null);
     }
 
     private void search() {
@@ -233,7 +268,7 @@ public class ConsoleMenu {
     private void reports() {
         System.out.println(
                 "1. Сводка  2. По статусам  3. Топ книг  4. Топ авторов  5. Топ читателей\n"
-                    + "6. Активность читателей  7. Читатели без заявок  8. По месяцам");
+                        + "6. Активность читателей  7. Читатели без заявок  8. По месяцам");
         switch (InputHelper.readInt("Выбор: ")) {
             case 1 ->
                     System.out.println(

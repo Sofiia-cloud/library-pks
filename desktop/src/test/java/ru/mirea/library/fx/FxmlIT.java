@@ -59,7 +59,10 @@ class FxmlIT {
             "search-view",
             "filter-view",
             "sort-view",
-            "statistics-view"
+            "statistics-view",
+            "users-view",
+            "audit-view",
+            "analytics-view"
         };
         for (String file : files) {
             Parent root =
@@ -78,7 +81,7 @@ class FxmlIT {
                                         switch (file) {
                                             case "login-view" -> 480;
                                             case "password-view" -> 520;
-                                            case "request-form" -> 500;
+                                            case "request-form" -> 560;
                                             case "reader-form" -> 460;
                                             default -> 1100;
                                         };
@@ -86,7 +89,7 @@ class FxmlIT {
                                         switch (file) {
                                             case "login-view" -> 390;
                                             case "password-view" -> 450;
-                                            case "request-form" -> 560;
+                                            case "request-form" -> 650;
                                             case "reader-form" -> 370;
                                             default -> 740;
                                         };
@@ -186,6 +189,46 @@ class FxmlIT {
             assertEquals("Название книги", sheet.getRow(0).getCell(2).getStringCellValue());
             assertEquals(rows.get(0).bookTitle(), sheet.getRow(1).getCell(2).getStringCellValue());
         }
+    }
+
+    @Test
+    void editsExistingMetadataAndDownloadsFilteredCsv() throws Exception {
+        var request =
+                new ru.mirea.library.client.BookRequestApiClient(ClientContext.api()).list().get(0);
+        Parent root =
+                onFx(
+                        () -> {
+                            FXMLLoader loader = new FXMLLoader();
+                            Parent node;
+                            try (var stream =
+                                    getClass().getResourceAsStream("/fxml/request-form.fxml")) {
+                                node = loader.load(stream);
+                            }
+                            RequestFormController form = loader.getController();
+                            form.setRequest(request);
+                            new Scene(node, 560, 650);
+                            return node;
+                        });
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20);
+        while (onFx(root::isDisable) && System.nanoTime() < deadline) Thread.sleep(50);
+        onFx(
+                () -> {
+                    assertEquals(
+                            request.requestedCopies(),
+                            ((javafx.scene.control.Spinner<?>) root.lookup("#copies")).getValue());
+                    assertEquals(
+                            request.urgent(),
+                            ((javafx.scene.control.CheckBox) root.lookup("#urgent")).isSelected());
+                    assertEquals(
+                            request.externalCode(),
+                            ((javafx.scene.control.TextField) root.lookup("#externalCode"))
+                                    .getText());
+                    assertTrue(root.lookup("#externalCode").isDisable());
+                    return null;
+                });
+        String csv = ClientContext.api().getText("/api/book-requests/export?urgent=true");
+        assertTrue(csv.contains("externalCode,readerCard"));
+        assertTrue(csv.contains(request.bookTitle()));
     }
 
     private static <T> T onFx(Callable<T> work) throws Exception {

@@ -125,6 +125,12 @@ public class ApiClient {
         return read(request("PUT", path, body), type);
     }
 
+    public String getText(String path) {
+        var response = request("GET", path, null);
+        check(response);
+        return response.body();
+    }
+
     public void delete(String path) {
         check(request("DELETE", path, null));
     }
@@ -190,7 +196,11 @@ public class ApiClient {
             HttpRequest.Builder builder =
                     HttpRequest.newBuilder(URI.create(base.toString() + path))
                             .timeout(Duration.ofSeconds(30))
-                            .header("Accept", "application/json");
+                            .header(
+                                    "Accept",
+                                    path.startsWith("/api/book-requests/export")
+                                            ? "text/csv, application/json"
+                                            : "application/json");
             if (access != null) builder.header("Authorization", "Bearer " + access);
             HttpRequest.BodyPublisher publisher =
                     body == null

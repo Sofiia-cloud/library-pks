@@ -1,6 +1,6 @@
 package ru.mirea.library.domain;
 
-import jakarta.persistence.Column;
+import jakarta.persistence.*;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -14,8 +14,10 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+
 import org.hibernate.annotations.Generated;
 import org.hibernate.generator.EventType;
+
 import ru.mirea.library.model.RequestStatus;
 
 import java.time.LocalDate;
@@ -32,8 +34,41 @@ public class BookRequest {
     private UUID id;
 
     @Generated(event = EventType.INSERT)
-    @Column(name = "request_number", nullable = false, unique = true, insertable = false, updatable = false)
+    @Column(
+            name = "request_number",
+            nullable = false,
+            unique = true,
+            insertable = false,
+            updatable = false)
     private Integer requestNumber;
+
+    @Column(name = "external_code", nullable = false, unique = true, length = 64)
+    private String externalCode;
+
+    @ManyToMany
+    @JoinTable(
+            name = "book_request_tags",
+            joinColumns = @JoinColumn(name = "request_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_name"))
+    @org.hibernate.annotations.BatchSize(size = 100)
+    private java.util.Set<Tag> tags = new java.util.HashSet<>();
+
+    public String getExternalCode() {
+        return externalCode;
+    }
+
+    public void setExternalCode(String value) {
+        externalCode = value;
+    }
+
+    public java.util.Set<Tag> getTags() {
+        return tags;
+    }
+
+    public void setTags(java.util.Set<Tag> value) {
+        tags.clear();
+        tags.addAll(value);
+    }
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "reader_id", nullable = false)
@@ -77,11 +112,15 @@ public class BookRequest {
     @Column(nullable = false)
     private long version;
 
-    protected BookRequest() {
-    }
+    protected BookRequest() {}
 
-    public BookRequest(Reader reader, String bookTitle, String bookAuthor, String isbn,
-                       LocalDate desiredReturnDate, String comment) {
+    public BookRequest(
+            Reader reader,
+            String bookTitle,
+            String bookAuthor,
+            String isbn,
+            LocalDate desiredReturnDate,
+            String comment) {
         this.reader = reader;
         this.bookTitle = bookTitle;
         this.bookAuthor = bookAuthor;
@@ -92,6 +131,7 @@ public class BookRequest {
 
     @PrePersist
     private void onCreate() {
+        if (externalCode == null) externalCode = "REQ-" + UUID.randomUUID();
         createdAt = LocalDateTime.now();
         updatedAt = createdAt;
     }
@@ -101,36 +141,112 @@ public class BookRequest {
         updatedAt = LocalDateTime.now();
     }
 
-    public UUID getId() { return id; }
-    public Integer getRequestNumber() { return requestNumber; }
-    public Reader getReader() { return reader; }
-    public void setReader(Reader reader) { this.reader = reader; }
-    public String getBookTitle() { return bookTitle; }
-    public void setBookTitle(String bookTitle) { this.bookTitle = bookTitle; }
-    public String getBookAuthor() { return bookAuthor; }
-    public void setBookAuthor(String bookAuthor) { this.bookAuthor = bookAuthor; }
-    public String getIsbn() { return isbn; }
-    public void setIsbn(String isbn) { this.isbn = isbn; }
-    public RequestStatus getStatus() { return status; }
-    public void setStatus(RequestStatus status) { this.status = status; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public LocalDate getDesiredReturnDate() { return desiredReturnDate; }
-    public void setDesiredReturnDate(LocalDate desiredReturnDate) { this.desiredReturnDate = desiredReturnDate; }
-    public String getComment() { return comment; }
-    public void setComment(String comment) { this.comment = comment; }
-    public int getRequestedCopies() { return requestedCopies; }
-    public void setRequestedCopies(int requestedCopies) { this.requestedCopies = requestedCopies; }
-    public boolean isUrgent() { return urgent; }
-    public void setUrgent(boolean urgent) { this.urgent = urgent; }
-    public boolean isArchived() { return archived; }
-    public void setArchived(boolean archived) { this.archived = archived; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public long getVersion() { return version; }
+    public UUID getId() {
+        return id;
+    }
+
+    public Integer getRequestNumber() {
+        return requestNumber;
+    }
+
+    public Reader getReader() {
+        return reader;
+    }
+
+    public void setReader(Reader reader) {
+        this.reader = reader;
+    }
+
+    public String getBookTitle() {
+        return bookTitle;
+    }
+
+    public void setBookTitle(String bookTitle) {
+        this.bookTitle = bookTitle;
+    }
+
+    public String getBookAuthor() {
+        return bookAuthor;
+    }
+
+    public void setBookAuthor(String bookAuthor) {
+        this.bookAuthor = bookAuthor;
+    }
+
+    public String getIsbn() {
+        return isbn;
+    }
+
+    public void setIsbn(String isbn) {
+        this.isbn = isbn;
+    }
+
+    public RequestStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(RequestStatus status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDate getDesiredReturnDate() {
+        return desiredReturnDate;
+    }
+
+    public void setDesiredReturnDate(LocalDate desiredReturnDate) {
+        this.desiredReturnDate = desiredReturnDate;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
+    }
+
+    public int getRequestedCopies() {
+        return requestedCopies;
+    }
+
+    public void setRequestedCopies(int requestedCopies) {
+        this.requestedCopies = requestedCopies;
+    }
+
+    public boolean isUrgent() {
+        return urgent;
+    }
+
+    public void setUrgent(boolean urgent) {
+        this.urgent = urgent;
+    }
+
+    public boolean isArchived() {
+        return archived;
+    }
+
+    public void setArchived(boolean archived) {
+        this.archived = archived;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public long getVersion() {
+        return version;
+    }
 
     @Override
     public boolean equals(Object other) {
         if (this == other) return true;
-        return other instanceof BookRequest request && getId() != null && getId().equals(request.getId());
+        return other instanceof BookRequest request
+                && getId() != null
+                && getId().equals(request.getId());
     }
 
     @Override

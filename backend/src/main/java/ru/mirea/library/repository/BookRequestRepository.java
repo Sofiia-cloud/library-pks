@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
 import ru.mirea.library.domain.BookRequest;
 import ru.mirea.library.model.RequestStatus;
 
@@ -15,19 +16,30 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface BookRequestRepository extends JpaRepository<BookRequest, UUID>, JpaSpecificationExecutor<BookRequest> {
+public interface BookRequestRepository
+        extends JpaRepository<BookRequest, UUID>, JpaSpecificationExecutor<BookRequest> {
     @Override
-    @EntityGraph(attributePaths = "reader")
+    @EntityGraph(attributePaths = {"reader", "tags"})
     Optional<BookRequest> findById(UUID id);
 
     @Override
     @EntityGraph(attributePaths = "reader")
     List<BookRequest> findAll(Specification<BookRequest> specification, Sort sort);
 
+    java.util.Optional<BookRequest> findByExternalCode(String externalCode);
+
+    @Override
+    @EntityGraph(attributePaths = "reader")
+    org.springframework.data.domain.Page<BookRequest> findAll(
+            Specification<BookRequest> specification,
+            org.springframework.data.domain.Pageable pageable);
+
     boolean existsByReader_Id(UUID readerId);
+
     boolean existsByReader_IdAndStatusIn(UUID readerId, Collection<RequestStatus> statuses);
 
-    @Query("""
+    @Query(
+            """
             select b from BookRequest b join fetch b.reader
             order by (case b.status
                 when ru.mirea.library.model.RequestStatus.CREATED then 0
