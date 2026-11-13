@@ -433,6 +433,16 @@ class ApiIT {
         assertThat(docs.path("paths").has("/api/book-requests")).isTrue();
     }
 
+    @Test
+    void healthcheckIsPublicAndDoesNotExposeDatabaseDetails() throws Exception {
+        var health = call("GET", "/actuator/health", null, null);
+        assertThat(health.status()).isEqualTo(200);
+        assertThat(health.body().get("status").asText()).isEqualTo("UP");
+        assertThat(health.body().has("components")).isFalse();
+        assertThat(call("GET", "/actuator/info", null, null).status()).isEqualTo(401);
+        assertThat(call("GET", "/actuator/env", null, null).status()).isNotEqualTo(200);
+    }
+
     private ReaderDto reference(String token) throws Exception {
         return json.treeToValue(
                 call(

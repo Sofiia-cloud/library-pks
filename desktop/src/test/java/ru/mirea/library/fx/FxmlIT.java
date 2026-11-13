@@ -23,7 +23,8 @@ class FxmlIT {
     @BeforeAll
     static void start() throws Exception {
         String login = System.getProperty("test.api.login"),
-                password = System.getProperty("test.api.password");
+                password =
+                        System.getProperty("test.api.password", System.getenv("TEST_API_PASSWORD"));
         assertNotNull(
                 login, "Set test.api.login and test.api.password for a dedicated test server");
         assertNotNull(password);
@@ -169,7 +170,8 @@ class FxmlIT {
         ClientContext.api()
                 .login(
                         System.getProperty("test.api.login"),
-                        System.getProperty("test.api.password"));
+                        System.getProperty(
+                                "test.api.password", System.getenv("TEST_API_PASSWORD")));
     }
 
     @Test
@@ -226,9 +228,10 @@ class FxmlIT {
                     assertTrue(root.lookup("#externalCode").isDisable());
                     return null;
                 });
-        String csv = ClientContext.api().getText("/api/book-requests/export?urgent=true");
+        String csv =
+                ClientContext.api().getText("/api/book-requests/export?urgent=" + request.urgent());
         assertTrue(csv.contains("externalCode,readerCard"));
-        assertTrue(csv.contains(request.bookTitle()));
+        assertTrue(csv.contains(request.externalCode()));
     }
 
     private static <T> T onFx(Callable<T> work) throws Exception {

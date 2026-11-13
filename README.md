@@ -1,438 +1,276 @@
 # Библиотечная информационная система
 
-Настольное приложение на JavaFX для учёта читателей библиотеки и заявок на выдачу книг.
+Проект по КР №1–3: Spring Boot backend, JavaFX и консольный клиент для учёта читателей и заявок на выдачу книг. Клиенты обращаются к одному REST API; бизнес-логика и доступ к PostgreSQL находятся на сервере.
 
-**Контрольная работа 1** — консольное приложение с JDBC, PostgreSQL и многослойной архитектурой.
+## Структура
 
-**Контрольная работа 2** — JavaFX-клиент с графическим интерфейсом, работающий с той же БД через JDBC.
-
----
-
-## Содержание
-
-- [Возможности](#возможности)
-- [Архитектура](#архитектура)
-- [Технологии](#технологии)
-- [Требования](#требования)
-- [Установка и запуск](#установка-и-запуск)
-- [Структура проекта](#структура-проекта)
-- [База данных](#база-данных)
-- [Бизнес-правила](#бизнес-правила)
-- [Enum RequestStatus](#enum-requeststatus)
-- [Функциональность JavaFX](#функциональность-javafx)
-- [Экспорт в Excel](#экспорт-в-excel)
-- [Сборка JAR](#сборка-jar)
-- [Частые проблемы](#частые-проблемы)
-- [Авторы](#авторы)
-
----
-
-## Возможности
-
-### Консольный клиент (КР №1)
-- Полный CRUD для читателей и заявок
-- 4 способа поиска (название книги, автор, ФИО читателя, номер билета)
-- 3 фильтра (статус, диапазон дат, читатель)
-- 3 сортировки через Stream API
-- 12 агрегатных отчётов и 6 показателей статистики
-- Экспорт в Excel через Apache POI
-- Просмотр таблиц БД
-
-### JavaFX-клиент (КР №2)
-- Главное окно с боковой навигацией
-- Раздел «Читатели»: таблица + CRUD + валидация
-- Раздел «Заявки»: таблица + CRUD + ComboBox читателя + статусы
-- Раздел «Поиск»: по названию книги / автору / ФИО / номеру билета
-- Раздел «Фильтрация»: по статусу / читателю / диапазону дат
-- Раздел «Сортировка»: по дате / названию / статусу (↑/↓)
-- Раздел «Статистика»: 7 показателей + распределение по статусам + топ-5 книг/авторов
-- Экспорт данных в `.xlsx` через FileChooser
-
----
-
-## Архитектура
-
-```
-Console UI / JavaFX Controller → Service → Repository / JDBC → PostgreSQL
-```
-
-| Слой                  | Назначение                | Пакет                       |
-| --------------------- | ------------------------- | --------------------------- |
-| Console UI            | Консольное меню           | `ru.mirea.library.ui`       |
-| JavaFX Controller     | Обработчики UI            | `ru.mirea.library.fx.controller` |
-| JavaFX Util           | Утилиты UI (AlertHelper)  | `ru.mirea.library.fx.util`  |
-| Service               | Бизнес-логика, валидация  | `ru.mirea.library.service`  |
-| Repository            | SQL-запросы, JDBC         | `ru.mirea.library.repository` |
-| Model                 | Предметные сущности       | `ru.mirea.library.model`    |
-| Exception             | Собственные исключения    | `ru.mirea.library.exception` |
-| Util                  | Подключение к БД, экспорт | `ru.mirea.library.util`     |
-
-SQL-запросы находятся только в слое Repository. В UI и контроллерах нет ни одной строки SQL.
-
----
-
-## Технологии
-
-- Java 17
-- Maven 3.9+
-- PostgreSQL 13+
-- JavaFX 21 (controls, fxml)
-- JDBC (org.postgresql:postgresql)
-- Apache POI (poi-ooxml) — экспорт в Excel
-- JUnit 5
-
----
-
-## Требования
-
-- JDK 17 или выше
-- Maven 3.9 или выше
-- PostgreSQL 13 или выше
-- Доступ к БД от пользователя `postgres` (или другого с правами на создание таблиц)
-
----
-
-## Установка и запуск
-
-### 1. Клонировать репозиторий
-
-```bash
-git clone https://github.com/Sofiia-cloud/library-pks.git
-cd library-pks
-```
-
-### 2. Создать базу данных
-
-```bash
-createdb -U postgres library_db
-```
-
-### 3. Применить схему и тестовые данные
-
-```cmd
-chcp 65001
-set PGCLIENTENCODING=UTF8
-psql -U postgres -d library_db -f schema.sql
-```
-
-### 4. Настроить подключение
-
-```cmd
-copy src\main\resources\db.properties.example src\main\resources\db.properties
-notepad src\main\resources\db.properties
-```
-
-Вписать свой пароль PostgreSQL:
-
-```
-db.url=jdbc:postgresql://localhost:5432/library_db
-db.user=postgres
-db.password=ТВОЙ_ПАРОЛЬ
-```
-
-Файл `db.properties` добавлен в `.gitignore` и не коммитится.
-
-### 5. Запустить JavaFX-приложение
-
-```bash
-mvn clean javafx:run
-```
-
-Откроется окно с боковой навигацией. Разделы: Читатели, Заявки, Поиск, Фильтрация, Сортировка, Статистика, Экспорт.
-Для экспорта нажмите «Экспорт» и выберите имя и расположение файла в диалоге сохранения. Заявки выгружаются в `.xlsx` вместе с ФИО читателей.
-
-### 6. Запустить консольное приложение (КР №1)
-
-```cmd
-mvn clean package -DskipTests
-java -Dfile.encoding=UTF-8 -jar target\library-system-1.0-SNAPSHOT.jar
-```
-
----
-
-## Структура проекта
-
-```
+```text
 library-pks/
-├── pom.xml
-├── schema.sql
-├── README.md
-├── mermaid.png
-├── .gitignore
-└── src/
-    └── main/
+├── pom.xml                       # общая сборка Maven
+├── compose.yaml                  # PostgreSQL и backend
+├── .env.example                  # образец локальных настроек
+├── api-contract/                 # DTO и общие перечисления
+├── backend/
+│   ├── Dockerfile
+│   ├── pom.xml
+│   └── src/main/
+│       ├── java/ru/mirea/library/
+│       │   ├── controller/       # REST API
+│       │   ├── service/          # правила и транзакции
+│       │   ├── repository/       # Spring Data JPA
+│       │   ├── domain/           # JPA-сущности
+│       │   ├── dto/              # преобразование сущностей в DTO
+│       │   ├── filter/           # поиск и фильтры
+│       │   ├── security/         # JWT, пароли, сессии
+│       │   ├── error/            # обработка ошибок
+│       │   └── config/
+│       └── resources/db/migration/
+└── desktop/
+    ├── pom.xml
+    └── src/main/
         ├── java/ru/mirea/library/
-        │   ├── Main.java                    ← JavaFX-точка входа
-        │   │
-        │   ├── model/
-        │   │   ├── Reader.java
-        │   │   ├── BookRequest.java
-        │   │   └── RequestStatus.java
-        │   │
-        │   ├── repository/
-        │   │   ├── Repository.java
-        │   │   ├── ReaderRepository.java
-        │   │   ├── BookRequestRepository.java
-        │   │   └── ReportRepository.java
-        │   │
-        │   ├── service/
-        │   │   ├── ReaderService.java
-        │   │   ├── BookRequestService.java
-        │   │   ├── SearchService.java
-        │   │   ├── FilterService.java
-        │   │   ├── SortService.java
-        │   │   ├── StatisticService.java
-        │   │   └── ReportService.java
-        │   │
-        │   ├── exception/
-        │   │   ├── BusinessException.java
-        │   │   ├── DatabaseException.java
-        │   │   └── EntityNotFoundException.java
-        │   │
-        │   ├── fx/                          ← JavaFX-слой (КР №2)
-        │   │   ├── controller/
-        │   │   │   ├── MainController.java
-        │   │   │   ├── ReaderController.java
-        │   │   │   ├── ReaderFormController.java
-        │   │   │   ├── RequestController.java
-        │   │   │   ├── RequestFormController.java
-        │   │   │   ├── SearchController.java
-        │   │   │   ├── FilterController.java
-        │   │   │   ├── SortController.java
-        │   │   │   └── StatisticsController.java
-        │   │   └── util/
-        │   │       └── AlertHelper.java
-        │   │
-        │   ├── ui/                          ← консольные меню (КР №1)
-        │   │   └── ...
-        │   │
-        │   └── util/
-        │       ├── DatabaseManager.java
-        │       └── ExcelExporter.java
-        │
-        └── resources/
-            ├── css/
-            │   └── styles.css
-            ├── fxml/
-            │   ├── main-view.fxml
-            │   ├── reader-view.fxml
-            │   ├── reader-form.fxml
-            │   ├── request-view.fxml
-            │   ├── request-form.fxml
-            │   ├── search-view.fxml
-            │   ├── filter-view.fxml
-            │   ├── sort-view.fxml
-            │   └── statistics-view.fxml
-            ├── db.properties.example
-            └── db.properties          ← не коммитится
+        │   ├── client/           # HTTP-клиент API
+        │   ├── fx/               # контроллеры JavaFX
+        │   ├── ui/               # консольное меню
+        │   └── util/             # экспорт Excel
+        └── resources/            # FXML и CSS
 ```
 
----
+Корневой `pom.xml` объединяет три модуля. Их собственные `pom.xml` задают зависимости и способы сборки каждого модуля.
 
-## База данных
+## Технологии и требования
 
-### ER-диаграмма
+- Backend: Java 21, Spring Boot 3.5.5, Spring Security, Spring Data JPA, Flyway, PostgreSQL 17.
+- Desktop: JavaFX 21, Java HTTP Client, Jackson, Apache POI.
+- Авторизация: BCrypt, access JWT и серверные refresh-сессии.
+- Проверки: JUnit 5, интеграционные тесты на PostgreSQL, тесты HTTP-клиента и JavaFX.
+- Для запуска PostgreSQL и backend нужен Docker Desktop с Linux-контейнерами и Docker Compose.
+- Для сборки и запуска desktop нужны JDK 21 и Maven 3.9+.
 
-![ER-диаграмма](mermaid.png)
+## Быстрый запуск
 
-### Схема
+Все команды выполняются из корня репозитория.
 
-`readers` — читатели библиотеки:
+### 1. Локальные настройки
 
-| Колонка             | Тип          | Ограничения             |
-| ------------------- | ------------ | ----------------------- |
-| id                  | SERIAL       | PRIMARY KEY             |
-| full_name           | VARCHAR(150) | NOT NULL                |
-| email               | VARCHAR(150) | NOT NULL, UNIQUE        |
-| phone               | VARCHAR(30)  |                         |
-| library_card_number | VARCHAR(30)  | NOT NULL, UNIQUE        |
-| registered_at       | TIMESTAMP    | NOT NULL, DEFAULT NOW() |
+При первом запуске скопируйте образец:
 
-`book_requests` — заявки на выдачу книги:
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
 
-| Колонка             | Тип          | Ограничения                                                           |
-| ------------------- | ------------ | --------------------------------------------------------------------- |
-| id                  | SERIAL       | PRIMARY KEY                                                           |
-| reader_id           | INTEGER      | NOT NULL, FOREIGN KEY → readers(id) ON DELETE RESTRICT                |
-| book_title          | VARCHAR(200) | NOT NULL                                                              |
-| book_author         | VARCHAR(150) | NOT NULL                                                              |
-| isbn                | VARCHAR(20)  |                                                                       |
-| status              | VARCHAR(20)  | NOT NULL, CHECK (CREATED/APPROVED/ISSUED/RETURNED/CANCELLED/REJECTED) |
-| created_at          | TIMESTAMP    | NOT NULL, DEFAULT NOW()                                               |
-| desired_return_date | DATE         |                                                                       |
-| comment             | TEXT         |                                                                       |
+Заполните `POSTGRES_PASSWORD`, `JWT_SECRET_BASE64` и `BOOTSTRAP_ADMIN_PASSWORD`. Временный пароль администратора должен содержать минимум 10 символов и занимать не более 72 байт UTF-8. Логин по умолчанию — `admin`.
 
-### Связь
+JWT-секрет — Base64 от минимум 32 случайных байт. Пример генерации в PowerShell:
 
-`book_requests.reader_id → readers.id` — many-to-one, `ON DELETE RESTRICT`.
+```powershell
+$jwtBytes = New-Object byte[] 48
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($jwtBytes)
+[Convert]::ToBase64String($jwtBytes)
+```
 
-### Тестовые данные
+Файл `.env` исключён из Git и Docker build context. В репозиторий попадает только `.env.example` с заглушками. Уже заполненный `.env` повторно копировать из образца не нужно.
 
-- 5 читателей
-- 12 заявок
-- 6 различных статусов
+### 2. PostgreSQL и backend
 
----
+```powershell
+docker compose up -d --build --wait
+docker compose ps
+```
+
+Оба сервиса должны получить состояние `healthy`. Backend запускается после готовности PostgreSQL.
+
+Адреса по умолчанию:
+
+| Назначение | Адрес |
+| --- | --- |
+| Backend | http://localhost:8080 |
+| Healthcheck | http://localhost:8080/actuator/health |
+| Swagger UI | http://localhost:8080/swagger-ui.html |
+| OpenAPI JSON | http://localhost:8080/v3/api-docs |
+| PostgreSQL | localhost:5433 |
+| База / пользователь | library_db / library_app |
+
+Порты публикуются только на `127.0.0.1`. Их можно изменить через `APP_PORT` и `POSTGRES_PORT` в `.env`. Внутри Docker backend обращается к `db:5432`.
+
+Проверка готовности:
+
+```powershell
+Invoke-RestMethod http://localhost:8080/actuator/health
+docker compose logs --tail=100 backend
+```
+
+Healthcheck возвращает `{"status":"UP"}` и учитывает доступность БД. Подробности подключения через этот адрес не раскрываются.
+
+### 3. JavaFX
+
+```powershell
+mvn clean install -DskipTests
+mvn -pl desktop javafx:run
+```
+
+Войдите с настройками первого администратора. При первом входе приложение потребует сменить временный пароль, затем войти заново. Последующие запуски backend сохраняют учётную запись и её новый пароль.
+
+По умолчанию клиент использует `http://localhost:8080`. Для другого адреса задайте переменную перед запуском:
+
+```powershell
+$env:LIBRARY_API_URL = "http://localhost:8081"
+mvn -pl desktop javafx:run
+```
+
+JavaFX и Maven сами не загружают `.env`; автоматически его читает Docker Compose.
+
+### 4. Консольный клиент
+
+После сборки:
+
+```powershell
+java -Dfile.encoding=UTF-8 -cp desktop/target/desktop-1.0-SNAPSHOT.jar ru.mirea.library.ConsoleMain
+```
+
+Консольный клиент использует тот же API: вход, читатели, заявки, архив, поиск, фильтры, сортировки, отчёты и экспорт Excel.
+
+## Возможности JavaFX и права
+
+| Роль | Доступ |
+| --- | --- |
+| VIEWER | Просмотр читателей, заявок и заметок; поиск, фильтры, аналитика, экспорт |
+| LIBRARIAN | Возможности просмотра, создание и изменение заявок, архив и восстановление, заметки, массовые операции, импорт CSV |
+| ADMIN | Все операции, управление читателями и пользователями, аудит, окончательное удаление |
+
+Автор или администратор может изменить и удалить заметку. Читатели включаются и отключаются без удаления истории заявок. Для отключённого читателя нельзя создать новую заявку.
+
+В заявке доступны UUID, порядковый номер, внешний код, читатель, книга, автор, ISBN, статус, срок возврата, комментарий, количество экземпляров, срочность и теги. Сервер хранит даты создания и изменения, версию и признак архива.
+
+Основной экран позволяет сочетать свободный поиск, читателя, статус, срочность, тег, архив, состояние возврата и сравнение количества экземпляров. Сортировка выполняется по номеру, названию, дате создания или статусу. Размер страницы — от 1 до 100 записей.
+
+Выбранные через Ctrl/Shift заявки можно архивировать, восстанавливать, переводить в новый статус, добавлять или удалять тег. Ответ содержит результат для каждой записи: ошибка одной заявки не отменяет успешные операции с другими.
 
 ## Бизнес-правила
 
-| #   | Правило                                      | Где реализовано                                    |
-| --- | -------------------------------------------- | -------------------------------------------------- |
-| 1   | ФИО читателя обязательно                     | ReaderService.create                               |
-| 2   | Email по regex, обязателен, уникален         | ReaderService.validateEmail                        |
-| 3   | Номер билета LIB-XXXX, обязателен, уникален  | ReaderService.validateCard                         |
-| 4   | Телефон по regex (если указан)               | ReaderService.validatePhone                        |
-| 5   | Нельзя удалить читателя с активными заявками | ReaderService.delete                               |
-| 6   | Название книги обязательно                   | BookRequestService.create                          |
-| 7   | Автор книги обязателен                       | BookRequestService.create                          |
-| 8   | Читатель должен существовать                 | BookRequestService через ReaderService.existsById  |
-| 9   | Дата возврата не в прошлом                   | BookRequestService.create                          |
-| 10  | Запрещены недопустимые переходы статусов     | RequestStatus.canTransitionTo                      |
-| 11  | Нельзя удалить заявку в статусе ISSUED       | BookRequestService.delete                          |
+- Читательский билет имеет формат `LIB-XXXX`, email и номер билета уникальны.
+- Количество экземпляров — от 1 до 1000. У заявки может быть до 20 тегов длиной до 60 символов.
+- Новый срок возврата не может находиться в прошлом. Сохранённую историческую дату можно оставить при редактировании.
+- Обычное удаление переносит заявку в архив. Выданную книгу нужно сначала оформить как возвращённую.
+- Перед окончательным удалением администратор должен архивировать заявку.
+- При изменении передаётся `version`. Устаревшая версия даёт HTTP 409; клиент предлагает обновить данные.
 
----
+Переходы статусов:
 
-## Enum RequestStatus
+| Из | В |
+| --- | --- |
+| CREATED | APPROVED, CANCELLED, REJECTED |
+| APPROVED | ISSUED, CANCELLED |
+| ISSUED | RETURNED |
+| RETURNED, CANCELLED, REJECTED | Завершённые статусы |
 
-```java
-public enum RequestStatus {
-    CREATED,    // создана
-    APPROVED,   // одобрена
-    ISSUED,     // выдана
-    RETURNED,   // возвращена
-    CANCELLED,  // отменена
-    REJECTED;   // отклонена
-}
+Вычисляемое состояние возврата зависит от статуса и текущей даты: книга не выдана, нет срока возврата, срок не скоро, возврат в течение трёх дней, просрочка или завершённая заявка.
+
+В аналитической сводке активными считаются заявки вне архива. Показатель активных заявок в прежнем разделе статистики учитывает статусы CREATED, APPROVED и ISSUED.
+
+## CSV и Excel
+
+Экспорт CSV доступен под таблицами заявок и учитывает текущие фильтры, выгружая все подходящие записи. Файл использует UTF-8, запятые как разделители и заголовок:
+
+```csv
+externalCode,readerCard,bookTitle,bookAuthor,isbn,status,desiredReturnDate,comment,requestedCopies,urgent,tags
 ```
 
-Разрешённые переходы (`canTransitionTo`):
+- `readerCard` — существующий читательский билет.
+- `desiredReturnDate` — дата `YYYY-MM-DD` или пустое поле.
+- `urgent` — `true` или `false`.
+- `tags` — теги через `|`.
+- Пустой `externalCode` означает создание заявки с автоматически сгенерированным кодом.
 
-| Из                            | В                             |
-| ----------------------------- | ----------------------------- |
-| CREATED                       | APPROVED, CANCELLED, REJECTED |
-| APPROVED                      | ISSUED, CANCELLED             |
-| ISSUED                        | RETURNED                      |
-| RETURNED, CANCELLED, REJECTED | — (терминальные)              |
+Импорт выполняется в два запроса. Предварительная проверка возвращает количество корректных и ошибочных строк, номера строк и описания ошибок. Применить файл можно после успешной проверки; проверка действует 15 минут и принадлежит загрузившему её пользователю. Если данные изменились после проверки, потребуется проверить файл заново.
 
----
+Режим `NEW_ONLY` создаёт новые записи и отклоняет занятые коды. `UPSERT` обновляет заявки по внешнему коду или создаёт новые. Действуют ограничения: 5 МБ и 5000 строк. Файл с ошибками не применяется; повторный запрос применения одной проверки не создаёт дубликаты.
 
-## Функциональность JavaFX
+Кавычки и переносы строк в CSV поддерживаются. Значения, похожие на формулы электронных таблиц, экранируются; обратный импорт снимает это экранирование.
 
-Главное окно — боковая панель с 7 кнопками навигации. Экраны подгружаются в `contentPane`.
+Экспорт Excel сохраняет все заявки с данными читателей в `.xlsx` через FileChooser и Apache POI.
 
-### Читатели
-- Таблица: ID, ФИО, Email, Телефон, Билет, Регистрация
-- CRUD + подтверждение удаления
-- Валидация ФИО / email / телефона / билета
-- Запрет удаления при активных заявках
+## REST API
 
-### Заявки
-- Таблица: ID, Читатель, Книга, Автор, ISBN, Статус, Создана, Вернуть до
-- CRUD + ComboBox для выбора читателя
-- ComboBox для выбора статуса при редактировании
-- DatePicker для даты возврата
-- Проверка переходов статусов
+Swagger содержит схемы DTO и параметры запросов. Чтобы обращаться к защищённым операциям через Swagger, получите access-токен в `POST /api/auth/login` и вставьте его в **Authorize**. При временном пароле сначала выполните `POST /api/auth/change-password`, затем войдите заново.
 
-### Поиск
-- Выбор типа: название книги / автор / ФИО читателя / номер билета
-- Поле ввода + кнопка «Найти»
-- Таблица результатов
+| Назначение | Адрес |
+| --- | --- |
+| Вход, refresh, выход, текущий пользователь, смена пароля | /api/auth/* |
+| Заявки: список и создание | /api/book-requests |
+| Карточка, изменение, архив | /api/book-requests/{id} |
+| Восстановление / окончательное удаление | /api/book-requests/{id}/restore, /permanent |
+| Массовые операции | /api/book-requests/bulk |
+| Заметки | /api/book-requests/{id}/notes |
+| CSV: проверка, применение, экспорт | /api/book-requests/import/preview, /import/apply, /export |
+| Читатели | /api/readers |
+| Аналитика | /api/analytics/summary |
+| Прежние отчёты и статистика | /api/reports/* |
+| Пользователи / аудит | /api/admin/users, /api/admin/audit |
 
-### Фильтрация
-- По статусу (ComboBox)
-- По читателю (ComboBox)
-- По диапазону дат создания (два DatePicker)
-- Кнопка «Сбросить все фильтры»
+Списки заявок, пользователей и аудита возвращают `items`, `page`, `size`, `totalElements`, `totalPages`. Нумерация страниц начинается с 0. Пример: `GET /api/book-requests?scope=ACTIVE&urgent=true&copiesOp=GE&copiesValue=2&page=0&size=25`.
 
-### Сортировка
-- Поле: дата / название / статус
-- Направление: ↑ / ↓
-- Сортировка через `Stream.sorted()` в `SortService`
+Ошибки имеют общий JSON-формат с кодом, сообщением и ошибками полей. Используются HTTP 400, 401, 403, 404 и 409; stack trace клиенту не передаётся. Correlation ID возвращается в заголовке `X-Correlation-ID`. Аудит доступен администратору и содержит входы и важные изменения.
 
-### Статистика
-- 7 показателей: всего читателей, всего заявок, активных, возвращённых, отменённых/отклонённых, за 30 дней, среднее на читателя
-- Распределение по статусам с процентами
-- Топ-5 книг
-- Топ-5 авторов
+## База данных и миграции
 
-### Экспорт
-- Кнопка «Экспорт» открывает `FileChooser` и сохраняет все заявки с данными читателя в `.xlsx` через Apache POI.
-- Файл сохраняется через `FileChooser`
+Hibernate работает с `ddl-auto: validate`. Схему создаёт и изменяет Flyway:
 
----
+| Миграция | Назначение |
+| --- | --- |
+| V1 | Исходные таблицы readers и book_requests |
+| V2 | UUID, сохранение прежних номеров и связей, версии, архив и дополнительные поля |
+| V3 | Пользователи, роли и refresh-сессии |
+| V4 | Внешние коды, теги, заметки, аудит и проверки импорта |
 
-## Экспорт в Excel
+Основные таблицы: `readers`, `book_requests`, `tags`, `book_request_tags`, `request_notes`, `app_users`, `user_roles`, `refresh_sessions`, `audit_events`, `import_batches`. История миграций хранится в `flyway_schema_history`.
 
-Файл `library_requests.xlsx` — экспорт заявок с JOIN читателей.
+При переносе старой базы сначала создаётся резервная копия `pg_dump`, затем она восстанавливается в отдельную пустую базу Docker. Для исходной схемы КР №1 требуется **однократный baseline версии 1** через Flyway; после него backend применяет V2–V4. Перед baseline необходимо убедиться, что это исходная схема с целочисленными ID, а не уже обновлённая база.
 
-Колонки: ID заявки, ФИО читателя, Название книги, Автор, ISBN, Статус, Создана, Вернуть до, Комментарий.
+Обычный запуск оставляет `baseline-on-migrate: false`: существующая неизвестная схема не принимается автоматически. Исходную базу при переносе не изменяют. После миграции нужно сравнить записи и связи с резервной копией.
 
----
+В `schema.sql` сохранён первоначальный скрипт КР №1 с пересозданием таблиц. Не запускайте его в рабочей базе.
 
-## Сборка JAR
+## Остановка и сохранность данных
 
-```bash
-mvn clean package -DskipTests
+```powershell
+docker compose stop
+docker compose start
 ```
 
-Создаётся `target/library-system-1.0-SNAPSHOT.jar` со всеми зависимостями.
+Остановка с удалением контейнеров:
 
-Запуск консольного клиента:
-
-```cmd
-java -Dfile.encoding=UTF-8 -jar target\library-system-1.0-SNAPSHOT.jar
+```powershell
+docker compose down
+docker compose up -d --wait
 ```
 
-JavaFX-клиент запускается через:
+PostgreSQL хранит данные в именованном томе `library-pks_postgres-data`; обычный `down` сохраняет его. Команда `docker compose down -v` удаляет том вместе с данными.
 
-```bash
-mvn javafx:run
+Изменение `POSTGRES_PASSWORD` в `.env` не меняет пароль уже созданного пользователя БД. Изменение bootstrap-пароля также не сбрасывает существующего администратора. Пароль пользователя приложения меняется в интерфейсе или через администратора.
+
+## Проверки
+
+Быстрая сборка и модульные тесты:
+
+```powershell
+mvn clean install
 ```
 
----
+Интеграционные тесты требуют отдельной тестовой PostgreSQL и пользователя с правом создания схем:
 
-## Частые проблемы
-
-### `psql` не распознаётся
-
-Добавь `bin` PostgreSQL в PATH:
-
-```cmd
-set PATH=C:\Program Files\PostgreSQL\13\bin;%PATH%
+```powershell
+mvn verify -Ppostgres-it "-Dtest.database.url=jdbc:postgresql://localhost:5433/library_test" "-Dtest.database.username=library_app" "-Dtest.database.password=YOUR_TEST_PASSWORD"
 ```
 
-### Кириллица в psql
-
-```cmd
-chcp 65001
-set PGCLIENTENCODING=UTF8
-```
-
-### `mvn` не распознаётся
-
-Добавь `C:\tools\apache-maven-3.9.9\bin` в `Path`.
-
-### `db.properties` не найден в classpath
-
-```cmd
-copy src\main\resources\db.properties.example src\main\resources\db.properties
-```
-
-### `password authentication failed for user "postgres"`
-
-Неверный пароль в `db.properties`.
-
-### JavaFX не запускается: `JavaFX runtime components are missing`
-
-Используй `mvn javafx:run`, а не `java -jar` (fat JAR с JavaFX не работает напрямую без модулей).
-
----
+Тесты проверяют перенос прежней схемы, связи и ограничения БД, версии, статусы, поиск, роли, сессии, CSV, архив, заметки, массовые операции, пользователей, аудит и healthcheck. Профиль desktop `ui-it` дополнительно проверяет FXML и работу клиента с отдельно подготовленным тестовым сервером.
 
 ## Авторы
 
-Команда из 4 человек, группа ЭФБО-02-24, РТУ МИРЭА
+Команда группы ЭФБО-02-24, РТУ МИРЭА:
 
-- Участник 1 (Семенов Тихон): инфраструктура JavaFX, Reader UI
-- Участник 2 (Иванова Валерия): BookRequest UI, CRUD, статусы, ComboBox читателей
-- Участник 3 (Лукьянов Антон): поиск, фильтрация, сортировка, статистика
-- Участник 4 (Головушкина София): экспорт, интеграция, README, CSS-полировка
+- Семенов Тихон
+- Иванова Валерия
+- Лукьянов Антон
+- Головушкина София

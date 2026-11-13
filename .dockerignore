@@ -1,0 +1,16 @@
+**
+!pom.xml
+!api-contract/
+!api-contract/pom.xml
+!api-contract/src/
+!api-contract/src/**
+!backend/
+!backend/pom.xml
+!backend/Dockerfile
+!backend/src/
+!backend/src/**
+!desktop/
+!desktop/pom.xml
+**/db.properties
+**/application-local.*
+**/.env*

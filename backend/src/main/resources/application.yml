@@ -21,6 +21,14 @@ server:
   error:
     include-message: never
     include-stacktrace: never
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
