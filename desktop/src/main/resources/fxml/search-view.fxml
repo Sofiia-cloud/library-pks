@@ -6,7 +6,7 @@
 
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
-      fx:controller="ru.mirea.library.fx.controller.SearchController"
+      fx:controller="ru.mirea.library.fx.controller.SearchController" fx:id="view"
       spacing="10">
     <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
 
@@ -27,7 +27,7 @@
 
     <TableView fx:id="resultTable" VBox.vgrow="ALWAYS">
         <columns>
-            <TableColumn fx:id="colId"        text="ID"              prefWidth="50"/>
+            <TableColumn fx:id="colId"        text="№"              prefWidth="50"/>
             <TableColumn fx:id="colReader"    text="Читатель"        prefWidth="180"/>
             <TableColumn fx:id="colBookTitle" text="Название книги"  prefWidth="200"/>
             <TableColumn fx:id="colAuthor"    text="Автор"           prefWidth="150"/>

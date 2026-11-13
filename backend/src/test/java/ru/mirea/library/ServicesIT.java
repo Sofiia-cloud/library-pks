@@ -13,8 +13,8 @@ import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfigurat
 import org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -337,10 +337,10 @@ class ServicesIT {
                             PlatformTransactionManager transactionManager) {
     }
 
-    @Configuration(proxyBeanMethods = false)
+    @TestConfiguration(proxyBeanMethods = false)
     @EntityScan(basePackageClasses = Reader.class)
     @EnableJpaRepositories(basePackageClasses = ReaderRepository.class)
-    @ComponentScan(basePackageClasses = BookRequestService.class)
+    @Import({ReaderService.class, BookRequestService.class, ReportService.class})
     static class ServiceConfiguration {
     }
 }

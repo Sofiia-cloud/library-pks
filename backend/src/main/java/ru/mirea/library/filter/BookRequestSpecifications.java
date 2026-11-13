@@ -1,6 +1,7 @@
 package ru.mirea.library.filter;
 
 import org.springframework.data.jpa.domain.Specification;
+
 import ru.mirea.library.domain.BookRequest;
 import ru.mirea.library.model.RequestStatus;
 
@@ -9,8 +10,7 @@ import java.util.Locale;
 import java.util.UUID;
 
 public final class BookRequestSpecifications {
-    private BookRequestSpecifications() {
-    }
+    private BookRequestSpecifications() {}
 
     public static Specification<BookRequest> all() {
         return (root, query, cb) -> cb.conjunction();
@@ -25,7 +25,8 @@ public final class BookRequestSpecifications {
     }
 
     public static Specification<BookRequest> readerNameContains(String text) {
-        return (root, query, cb) -> cb.like(cb.lower(root.get("reader").get("fullName")), pattern(text), '!');
+        return (root, query, cb) ->
+                cb.like(cb.lower(root.get("reader").get("fullName")), pattern(text), '!');
     }
 
     public static Specification<BookRequest> readerCardEquals(String card) {
@@ -44,8 +45,29 @@ public final class BookRequestSpecifications {
         return (root, query, cb) -> cb.between(root.get("createdAt"), from, to);
     }
 
+    public static Specification<BookRequest> orderByStatus(boolean ascending) {
+        return (root, query, cb) -> {
+            var order =
+                    cb.<RequestStatus, Integer>selectCase(root.get("status"))
+                            .when(RequestStatus.CREATED, 0)
+                            .when(RequestStatus.APPROVED, 1)
+                            .when(RequestStatus.ISSUED, 2)
+                            .when(RequestStatus.RETURNED, 3)
+                            .when(RequestStatus.CANCELLED, 4)
+                            .when(RequestStatus.REJECTED, 5)
+                            .otherwise(6);
+            query.orderBy(
+                    ascending ? cb.asc(order) : cb.desc(order), cb.asc(root.get("requestNumber")));
+            return cb.conjunction();
+        };
+    }
+
     private static String pattern(String text) {
-        return "%" + text.toLowerCase(Locale.ROOT).replace("!", "!!")
-                .replace("%", "!%").replace("_", "!_") + "%";
+        return "%"
+                + text.toLowerCase(Locale.ROOT)
+                        .replace("!", "!!")
+                        .replace("%", "!%")
+                        .replace("_", "!_")
+                + "%";
     }
 }

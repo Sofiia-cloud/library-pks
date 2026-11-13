@@ -9,7 +9,7 @@
 
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
-            fx:controller="ru.mirea.library.fx.controller.ReaderController">
+            fx:controller="ru.mirea.library.fx.controller.ReaderController" fx:id="view">
 
     <top>
         <HBox spacing="10" styleClass="toolbar">
@@ -26,7 +26,7 @@
     <center>
         <TableView fx:id="readerTable">
             <columns>
-                <TableColumn fx:id="colId"     text="ID"            prefWidth="60"/>
+                <TableColumn fx:id="colId"     text="№"            prefWidth="60"/>
                 <TableColumn fx:id="colName"   text="ФИО"           prefWidth="220"/>
                 <TableColumn fx:id="colEmail"  text="Email"         prefWidth="220"/>
                 <TableColumn fx:id="colPhone"  text="Телефон"       prefWidth="140"/>

@@ -15,3 +15,22 @@ spring:
   sql:
     init:
       mode: never
+
+server:
+  port: ${APP_PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+app:
+  auth:
+    secret-base64: ${JWT_SECRET_BASE64}
+    issuer: ${JWT_ISSUER:library-pks}
+    access-minutes: ${ACCESS_TOKEN_MINUTES:15}
+    refresh-days: ${REFRESH_TOKEN_DAYS:14}
+  bootstrap:
+    login: ${BOOTSTRAP_ADMIN_LOGIN:}
+    name: ${BOOTSTRAP_ADMIN_NAME:Администратор}
+    password: ${BOOTSTRAP_ADMIN_PASSWORD:}

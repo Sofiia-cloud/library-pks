@@ -1,7 +1,5 @@
 package ru.mirea.library.ui;
 
-import ru.mirea.library.exception.BusinessException;
-
 import java.io.BufferedReader;
 import java.io.Console;
 import java.io.IOException;
@@ -18,17 +16,17 @@ public final class InputHelper {
     private static final BufferedReader READER =
             new BufferedReader(new InputStreamReader(System.in, INPUT_CHARSET));
 
-    private static final DateTimeFormatter DATE_FMT =
-            DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
-    private InputHelper() { }
+    private InputHelper() {}
 
     private static Charset detectConsoleCharset() {
         String override = System.getProperty("console.encoding");
         if (override != null && !override.isBlank()) {
             try {
                 return Charset.forName(override);
-            } catch (Exception ignored) { }
+            } catch (Exception ignored) {
+            }
         }
 
         Console console = System.console();
@@ -40,7 +38,8 @@ public final class InputHelper {
         if (stdinEnc != null && !stdinEnc.isBlank()) {
             try {
                 return Charset.forName(stdinEnc);
-            } catch (Exception ignored) { }
+            } catch (Exception ignored) {
+            }
         }
 
         String os = System.getProperty("os.name", "").toLowerCase();
@@ -48,6 +47,27 @@ public final class InputHelper {
             return Charset.forName("CP866");
         }
         return StandardCharsets.UTF_8;
+    }
+
+    public static String readPassword(String prompt) {
+        Console console = System.console();
+        if (console != null) {
+            char[] chars = console.readPassword("%s", prompt);
+            if (chars == null) throw new IllegalStateException("Ввод завершён");
+            try {
+                return new String(chars);
+            } finally {
+                java.util.Arrays.fill(chars, ' ');
+            }
+        }
+        System.out.print(prompt);
+        try {
+            String line = READER.readLine();
+            if (line == null) throw new IllegalStateException("Ввод завершён");
+            return line;
+        } catch (IOException e) {
+            throw new IllegalStateException("Ошибка чтения ввода", e);
+        }
     }
 
     public static int readInt(String prompt) {
@@ -69,7 +89,8 @@ public final class InputHelper {
         System.out.print(prompt);
         try {
             String line = READER.readLine();
-            return line == null ? "" : line.trim();
+            if (line == null) throw new IllegalStateException("Ввод завершён");
+            return line.trim();
         } catch (IOException e) {
             throw new RuntimeException("Ошибка чтения ввода", e);
         }
@@ -83,7 +104,7 @@ public final class InputHelper {
         try {
             return LocalDate.parse(raw.trim(), DATE_FMT);
         } catch (Exception e) {
-            throw new BusinessException(
+            throw new IllegalArgumentException(
                     "Неверный формат даты: " + raw + " (ожидается дд.ММ.гггг)");
         }
     }
@@ -91,7 +112,7 @@ public final class InputHelper {
     public static LocalDate readDate(String prompt) {
         LocalDate d = readOptionalDate(prompt);
         if (d == null) {
-            throw new BusinessException("Дата обязательна");
+            throw new IllegalArgumentException("Дата обязательна");
         }
         return d;
     }

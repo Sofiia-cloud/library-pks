@@ -17,7 +17,7 @@ import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfigurat
 import org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -126,7 +126,7 @@ class PersistenceIT {
         Flyway flyway = flyway();
         assertThatThrownBy(flyway::migrate).isInstanceOf(FlywayException.class);
         flyway.baseline();
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(1);
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(2);
         assertThat(jdbc.queryForList("SELECT reader_number, full_name, email, phone, library_card_number, "
                 + "registered_at FROM readers ORDER BY reader_number")).isEqualTo(readersBefore);
         assertThat(jdbc.queryForList("SELECT br.request_number, r.reader_number, br.book_title, br.book_author, "
@@ -225,7 +225,7 @@ class PersistenceIT {
                     assertThat(context).hasNotFailed().hasSingleBean(EntityManagerFactory.class);
                     assertThat(context.getEnvironment().getProperty("spring.jpa.hibernate.ddl-auto"))
                             .isEqualTo("validate");
-                    assertThat(context.getBean(Flyway.class).info().current().getVersion().toString()).isEqualTo("2");
+                    assertThat(context.getBean(Flyway.class).info().current().getVersion().toString()).isEqualTo("3");
                     action.accept(context.getBean(EntityManagerFactory.class));
                 });
     }
@@ -250,7 +250,7 @@ class PersistenceIT {
         em.close();
     }
 
-    @Configuration(proxyBeanMethods = false)
+    @TestConfiguration(proxyBeanMethods = false)
     @EntityScan(basePackageClasses = {Reader.class, BookRequest.class})
     static class EntityConfiguration {
     }

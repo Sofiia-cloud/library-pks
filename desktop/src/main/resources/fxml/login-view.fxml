@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.Insets?>
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="ru.mirea.library.fx.controller.LoginController"
+      fx:id="form" spacing="14" alignment="CENTER">
+    <padding><Insets top="30" right="45" bottom="30" left="45"/></padding>
+    <Label text="Библиотечная система" styleClass="title"/>
+    <Label text="Вход в учётную запись"/>
+    <TextField fx:id="fieldLogin" promptText="Логин" maxWidth="350"/>
+    <PasswordField fx:id="fieldPassword" promptText="Пароль" maxWidth="350"/>
+    <Button fx:id="btnLogin" text="Войти" defaultButton="true" styleClass="primary-button" maxWidth="350"/>
+    <Label fx:id="lblError" wrapText="true" maxWidth="350"/>
+</VBox>

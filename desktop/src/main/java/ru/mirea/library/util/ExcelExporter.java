@@ -2,20 +2,28 @@ package ru.mirea.library.util;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import ru.mirea.library.exception.DatabaseException;
-import ru.mirea.library.model.RequestExportRow;
-import ru.mirea.library.repository.ReportRepository;
+
+import ru.mirea.library.client.ApiException;
+import ru.mirea.library.client.ClientContext;
+import ru.mirea.library.dto.ExportRowDto;
 
 import java.io.FileOutputStream;
 import java.util.List;
 
 public final class ExcelExporter {
 
-    private ExcelExporter() { }
+    private ExcelExporter() {}
 
     private static final String[] HEADERS = {
-            "ID заявки", "ФИО читателя", "Название книги", "Автор",
-            "ISBN", "Статус", "Создана", "Вернуть до", "Комментарий"
+        "ID заявки",
+        "ФИО читателя",
+        "Название книги",
+        "Автор",
+        "ISBN",
+        "Статус",
+        "Создана",
+        "Вернуть до",
+        "Комментарий"
     };
 
     public static void exportBookRequests(String filePath) {
@@ -23,7 +31,7 @@ public final class ExcelExporter {
             Sheet sheet = wb.createSheet("Заявки");
 
             CellStyle headerStyle = createHeaderStyle(wb);
-            CellStyle bodyStyle   = createBodyStyle(wb);
+            CellStyle bodyStyle = createBodyStyle(wb);
             CellStyle dateTimeStyle = createDateStyle(wb, "dd.MM.yyyy HH:mm");
             CellStyle dateStyle = createDateStyle(wb, "dd.MM.yyyy");
 
@@ -34,12 +42,13 @@ public final class ExcelExporter {
                 cell.setCellStyle(headerStyle);
             }
 
-            List<RequestExportRow> requests = new ReportRepository().requestsForExport();
+            List<ExportRowDto> requests =
+                    ClientContext.api().getList("/api/reports/export-data", ExportRowDto.class);
             int rowIdx = 1;
-            for (RequestExportRow request : requests) {
+            for (ExportRowDto request : requests) {
                 Row row = sheet.createRow(rowIdx++);
 
-                setCell(row, 0, request.id(), bodyStyle);
+                setCell(row, 0, request.requestNumber(), bodyStyle);
                 setCell(row, 1, request.readerName(), bodyStyle);
                 setCell(row, 2, request.bookTitle(), bodyStyle);
                 setCell(row, 3, request.bookAuthor(), bodyStyle);
@@ -75,8 +84,11 @@ public final class ExcelExporter {
                 wb.write(out);
             }
 
+        } catch (ApiException e) {
+            throw e;
         } catch (Exception e) {
-            throw new DatabaseException("Ошибка экспорта в Excel: " + e.getMessage(), e);
+            throw new ApiException(
+                    0, "EXPORT_ERROR", "Не удалось сохранить файл Excel: " + e.getMessage());
         }
     }
 
